@@ -23,6 +23,15 @@ export default function AgendaFilters({
   initialDay,
   availableDays,
 }: AgendaFiltersProps) {
+  const safeAvailableDays = availableDays
+    .filter((day): day is { value: string; label: string } => {
+      return Boolean(day && typeof day.value === "string" && day.value.trim());
+    })
+    .filter(
+      (day, index, array) =>
+        array.findIndex((item) => item.value === day.value) === index
+    );
+
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -58,9 +67,9 @@ export default function AgendaFilters({
               defaultValue={initialStatus}
               className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
             >
-              {STATUS_OPTIONS.map((option) => (
+              {STATUS_OPTIONS.map((option, index) => (
                 <option
-                  key={`status-${option.value || "all"}`}
+                  key={`status-${option.value || `all-${index}`}`}
                   value={option.value}
                 >
                   {option.label}
@@ -76,12 +85,13 @@ export default function AgendaFilters({
               defaultValue={initialDay}
               className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
             >
-              <option key="day-all" value="">
-                Todos los días
-              </option>
+              <option value="">Todos los días</option>
 
-              {availableDays.map((day) => (
-                <option key={`day-${day.value}`} value={day.value}>
+              {safeAvailableDays.map((day, index) => (
+                <option
+                  key={`day-${day.value}-${index}`}
+                  value={day.value}
+                >
                   {day.label}
                 </option>
               ))}
