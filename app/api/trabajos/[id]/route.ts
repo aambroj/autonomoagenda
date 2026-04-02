@@ -36,6 +36,16 @@ type TrabajoRow = {
   duration_minutes: number;
   notes: string | null;
   status: string;
+  committed_at: string | null;
+  done_at: string | null;
+  invoiced_at: string | null;
+};
+
+type StatusUpdatePayload = {
+  status: string;
+  committed_at?: string | null;
+  done_at?: string | null;
+  invoiced_at?: string | null;
 };
 
 function normalizeText(value: unknown) {
@@ -121,11 +131,63 @@ function getTodayInMadrid() {
   return `${year}-${month}-${day}`;
 }
 
+function buildStatusUpdatePayload(
+  currentStatus: string,
+  nextStatus: string
+): StatusUpdatePayload {
+  if (currentStatus === nextStatus) {
+    return { status: nextStatus };
+  }
+
+  const now = new Date().toISOString();
+
+  if (nextStatus === "pendiente") {
+    if (currentStatus === "hecho") {
+      return {
+        status: nextStatus,
+        committed_at: now,
+        done_at: null,
+        invoiced_at: null,
+      };
+    }
+
+    return {
+      status: nextStatus,
+      committed_at: now,
+    };
+  }
+
+  if (nextStatus === "hecho") {
+    return {
+      status: nextStatus,
+      done_at: now,
+      invoiced_at: null,
+    };
+  }
+
+  if (nextStatus === "facturado") {
+    return {
+      status: nextStatus,
+      invoiced_at: now,
+    };
+  }
+
+  if (nextStatus === "cancelado") {
+    return {
+      status: nextStatus,
+    };
+  }
+
+  return {
+    status: nextStatus,
+  };
+}
+
 async function getTrabajoById(trabajoId: number) {
   const { data, error } = await supabase
     .from("trabajos")
     .select(
-      "id, client_name, phone, address, work_date, start_time, duration_minutes, notes, status"
+      "id, client_name, phone, address, work_date, start_time, duration_minutes, notes, status, committed_at, done_at, invoiced_at"
     )
     .eq("id", trabajoId)
     .maybeSingle();
@@ -386,13 +448,13 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
+    const updatePayload = buildStatusUpdatePayload(currentStatus, nextStatus);
+
     const { data, error } = await supabase
       .from("trabajos")
-      .update({
-        status: nextStatus,
-      })
+      .update(updatePayload)
       .eq("id", trabajoId)
-      .select("id, status")
+      .select("id, status, committed_at, done_at, invoiced_at")
       .maybeSingle();
 
     if (error) {
@@ -473,7 +535,10 @@ export async function DELETE(request: Request, context: RouteContext) {
       );
     }
 
-    const { error } = await supabase.from("trabajos").delete().eq("id", trabajoId);
+    const { error } = await supabase
+      .from("trabajos")
+      .delete()
+      .eq("id", trabajoId);
 
     if (error) {
       return NextResponse.json(

@@ -112,10 +112,13 @@ export default function QuickAddJobForm() {
   const searchParams = useSearchParams();
 
   const agendaMinDate = useMemo(() => getAgendaMinDateInMadrid(), []);
+  const madridNow = useMemo(() => getMadridNowParts(), []);
+  const currentMinutesInMadrid = madridNow.hour * 60 + madridNow.minute;
 
   const queryDate = searchParams.get("date") || "";
   const queryTime = searchParams.get("time") || "";
   const queryDuration = searchParams.get("duration") || "";
+  const queryQuick = searchParams.get("quick") || "";
 
   const [clientName, setClientName] = useState("");
   const [phone, setPhone] = useState("");
@@ -135,8 +138,41 @@ export default function QuickAddJobForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const prefilledFromGap = Boolean(queryDate || queryTime || queryDuration);
   const isSundaySelected = isSundayDate(workDate);
+  const isTodaySelected = workDate === madridNow.dateValue;
+
+  const isQuickModalOpen =
+    queryQuick === "1" && Boolean(queryDate || queryTime || queryDuration);
+
+  const isPrefilledTimeActive = Boolean(
+    queryDate && queryTime && workDate === queryDate && !isSundaySelected
+  );
+
+  const selectableTimes = useMemo(() => {
+    const merged = [...availableTimes];
+
+    if (isPrefilledTimeActive && queryTime && !merged.includes(queryTime)) {
+      merged.push(queryTime);
+    }
+
+    return merged
+      .sort((a, b) => timeToMinutes(a) - timeToMinutes(b))
+      .filter((slot) => {
+        if (!isTodaySelected) return true;
+        if (isPrefilledTimeActive && slot === queryTime) return true;
+        return timeToMinutes(slot) >= currentMinutesInMadrid;
+      });
+  }, [
+    availableTimes,
+    isPrefilledTimeActive,
+    queryTime,
+    isTodaySelected,
+    currentMinutesInMadrid,
+  ]);
+
+  function closeQuickModal() {
+    router.replace("/");
+  }
 
   useEffect(() => {
     if (queryDate && queryDate >= agendaMinDate) {
@@ -189,11 +225,15 @@ export default function QuickAddJobForm() {
         setAvailableTimes(slots);
 
         setStartTime((current) => {
-          if (current && slots.includes(current)) {
+          if (
+            current &&
+            (slots.includes(current) ||
+              (workDate === queryDate && current === queryTime))
+          ) {
             return current;
           }
 
-          if (queryTime && slots.includes(queryTime)) {
+          if (queryTime && workDate === queryDate) {
             return queryTime;
           }
 
@@ -237,7 +277,7 @@ export default function QuickAddJobForm() {
     return () => {
       cancelled = true;
     };
-  }, [workDate, durationMinutes, queryTime, isSundaySelected]);
+  }, [workDate, durationMinutes, queryTime, queryDate, isSundaySelected]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -268,6 +308,8 @@ export default function QuickAddJobForm() {
         throw new Error(result?.error || "No se pudo guardar el trabajo.");
       }
 
+      const savedWorkDate = workDate;
+
       setClientName("");
       setPhone("");
       setAddress("");
@@ -277,7 +319,12 @@ export default function QuickAddJobForm() {
       setNotes("");
       setSuccess("Trabajo guardado correctamente como Comprometido.");
 
-      router.replace("/#quick-add-job-form");
+      if (isQuickModalOpen) {
+        router.replace(`/#day-${savedWorkDate}`);
+      } else {
+        router.replace("/#quick-add-job-form");
+      }
+
       router.refresh();
     } catch (error) {
       const message =
@@ -292,250 +339,250 @@ export default function QuickAddJobForm() {
     !loadingAvailability &&
     !availabilityError &&
     !isSundaySelected &&
-    availableTimes.length === 0;
+    selectableTimes.length === 0;
 
-  const firstAvailableTime = availableTimes[0] ?? null;
+  const firstAvailableTime = selectableTimes[0] ?? null;
   const selectedDurationMinutes = Number(durationMinutes);
 
   return (
-    <section
-      id="quick-add-job-form"
-      className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
-    >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">
-            Añadir trabajo rápido
-          </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Al guardar, el trabajo quedará directamente como Comprometido.
-          </p>
-        </div>
-      </div>
-
-      {prefilledFromGap ? (
-        <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Formulario preparado desde un hueco libre.
-          {queryDate ? (
-            <>
-              {" "}
-              Día: <span className="font-semibold">{queryDate}</span>.
-            </>
-          ) : null}
-          {queryTime ? (
-            <>
-              {" "}
-              Hora: <span className="font-semibold">{queryTime}</span>.
-            </>
-          ) : null}
-          {isValidDuration(queryDuration) ? (
-            <>
-              {" "}
-              Duración:{" "}
-              <span className="font-semibold">
-                {formatDurationLabel(Number(queryDuration))}
-              </span>
-              .
-            </>
-          ) : null}
-        </div>
+    <>
+      {isQuickModalOpen ? (
+        <div
+          aria-hidden="true"
+          onClick={closeQuickModal}
+          className="fixed inset-0 z-40 bg-slate-900/50"
+        />
       ) : null}
 
-      <form onSubmit={handleSubmit} className="mt-5 grid gap-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-2">
-            <span className="text-sm font-medium text-slate-700">
-              Cliente *
-            </span>
-            <input
-              type="text"
-              value={clientName}
-              onChange={(event) => setClientName(event.target.value)}
-              className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
-              placeholder="Nombre del cliente"
-              required
-            />
-          </label>
+      <section
+        id="quick-add-job-form"
+        className={
+          isQuickModalOpen
+            ? "fixed inset-x-4 top-4 z-50 mx-auto max-h-[calc(100vh-2rem)] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:top-8 sm:p-6"
+            : "rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+        }
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">
+              Añadir trabajo rápido
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Al guardar, el trabajo quedará directamente como Comprometido.
+            </p>
+          </div>
 
-          <label className="grid gap-2">
-            <span className="text-sm font-medium text-slate-700">
-              Teléfono
-            </span>
-            <input
-              type="text"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
-              placeholder="600123123"
-            />
-          </label>
+          {isQuickModalOpen ? (
+            <button
+              type="button"
+              onClick={closeQuickModal}
+              className="inline-flex self-start rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Cerrar
+            </button>
+          ) : null}
         </div>
 
-        <label className="grid gap-2">
-          <span className="text-sm font-medium text-slate-700">Dirección</span>
-          <input
-            type="text"
-            value={address}
-            onChange={(event) => setAddress(event.target.value)}
-            className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
-            placeholder="Calle, número, localidad"
-          />
-        </label>
+        <form onSubmit={handleSubmit} className="mt-5 grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-2">
+              <span className="text-sm font-medium text-slate-700">
+                Cliente *
+              </span>
+              <input
+                type="text"
+                value={clientName}
+                onChange={(event) => setClientName(event.target.value)}
+                className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
+                placeholder="Nombre del cliente"
+                required
+              />
+            </label>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+            <label className="grid gap-2">
+              <span className="text-sm font-medium text-slate-700">
+                Teléfono
+              </span>
+              <input
+                type="text"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
+                placeholder="600123123"
+              />
+            </label>
+          </div>
+
           <label className="grid gap-2">
-            <span className="text-sm font-medium text-slate-700">Fecha *</span>
+            <span className="text-sm font-medium text-slate-700">
+              Dirección
+            </span>
             <input
-              type="date"
-              value={workDate}
-              min={agendaMinDate}
-              onChange={(event) => setWorkDate(event.target.value)}
+              type="text"
+              value={address}
+              onChange={(event) => setAddress(event.target.value)}
               className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
-              required
+              placeholder="Calle, número, localidad"
             />
           </label>
 
+          <div className="grid gap-4 sm:grid-cols-3">
+            <label className="grid gap-2">
+              <span className="text-sm font-medium text-slate-700">Fecha *</span>
+              <input
+                type="date"
+                value={workDate}
+                min={agendaMinDate}
+                onChange={(event) => setWorkDate(event.target.value)}
+                className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
+                required
+              />
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-sm font-medium text-slate-700">Hora *</span>
+              <select
+                value={startTime}
+                onChange={(event) => setStartTime(event.target.value)}
+                className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500 disabled:bg-slate-100"
+                required
+                disabled={
+                  isSundaySelected ||
+                  loadingAvailability ||
+                  !!availabilityError ||
+                  selectableTimes.length === 0
+                }
+              >
+                {isSundaySelected ? (
+                  <option value="">Domingo · descanso</option>
+                ) : loadingAvailability ? (
+                  <option value="">Cargando horas libres...</option>
+                ) : availabilityError ? (
+                  <option value="">No disponible</option>
+                ) : selectableTimes.length === 0 ? (
+                  <option value="">Sin horas libres</option>
+                ) : (
+                  selectableTimes.map((slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-sm font-medium text-slate-700">
+                Duración *
+              </span>
+              <select
+                value={durationMinutes}
+                onChange={(event) => setDurationMinutes(event.target.value)}
+                className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
+              >
+                <option value="30">30 min</option>
+                <option value="45">45 min</option>
+                <option value="60">1 h</option>
+                <option value="90">1 h 30 min</option>
+                <option value="120">2 h</option>
+                <option value="150">2 h 30 min</option>
+                <option value="180">3 h</option>
+                <option value="210">3 h 30 min</option>
+                <option value="240">4 h</option>
+                <option value="270">4 h 30 min</option>
+                <option value="300">5 h</option>
+                <option value="360">6 h</option>
+                <option value="420">7 h</option>
+                <option value="480">8 h</option>
+                <option value="540">9 h</option>
+                <option value="600">10 h</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+            {isSundaySelected ? (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <span className="font-semibold">
+                  Domingo marcado como descanso.
+                </span>{" "}
+                No se ofrecen horas libres automáticas para ese día.
+              </div>
+            ) : loadingAvailability ? (
+              <div className="text-sm text-slate-700">
+                Cargando horas libres para{" "}
+                <span className="font-semibold">
+                  {formatDurationLabel(selectedDurationMinutes)}
+                </span>
+                ...
+              </div>
+            ) : availabilityError ? (
+              <div className="text-sm text-red-700">{availabilityError}</div>
+            ) : noSlotsAvailable ? (
+              <div className="text-sm text-red-700">
+                No quedan horas libres para una duración de{" "}
+                <span className="font-semibold">
+                  {formatDurationLabel(selectedDurationMinutes)}
+                </span>{" "}
+                en ese día.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-slate-700">
+                  Solo se muestran horas libres reales según el día y la duración
+                  elegida.
+                </div>
+
+                {firstAvailableTime ? (
+                  <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+                    Primera hora libre: {firstAvailableTime}
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+
           <label className="grid gap-2">
-            <span className="text-sm font-medium text-slate-700">Hora *</span>
-            <select
-              value={startTime}
-              onChange={(event) => setStartTime(event.target.value)}
-              className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500 disabled:bg-slate-100"
-              required
+            <span className="text-sm font-medium text-slate-700">Nota</span>
+            <input
+              type="text"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
+              placeholder="Cambiar grifo, revisar enchufe..."
+            />
+          </label>
+
+          {error ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          ) : null}
+
+          {success ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              {success}
+            </div>
+          ) : null}
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
               disabled={
                 isSundaySelected ||
+                saving ||
                 loadingAvailability ||
                 !!availabilityError ||
-                availableTimes.length === 0
+                selectableTimes.length === 0 ||
+                !startTime
               }
+              className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSundaySelected ? (
-                <option value="">Domingo · descanso</option>
-              ) : loadingAvailability ? (
-                <option value="">Cargando horas libres...</option>
-              ) : availabilityError ? (
-                <option value="">No disponible</option>
-              ) : availableTimes.length === 0 ? (
-                <option value="">Sin horas libres</option>
-              ) : (
-                availableTimes.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
-
-          <label className="grid gap-2">
-            <span className="text-sm font-medium text-slate-700">
-              Duración *
-            </span>
-            <select
-              value={durationMinutes}
-              onChange={(event) => setDurationMinutes(event.target.value)}
-              className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
-            >
-              <option value="30">30 min</option>
-              <option value="45">45 min</option>
-              <option value="60">1 h</option>
-              <option value="90">1 h 30 min</option>
-              <option value="120">2 h</option>
-              <option value="150">2 h 30 min</option>
-              <option value="180">3 h</option>
-              <option value="210">3 h 30 min</option>
-              <option value="240">4 h</option>
-              <option value="270">4 h 30 min</option>
-              <option value="300">5 h</option>
-              <option value="360">6 h</option>
-              <option value="420">7 h</option>
-              <option value="480">8 h</option>
-              <option value="540">9 h</option>
-              <option value="600">10 h</option>
-            </select>
-          </label>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-          {isSundaySelected ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              <span className="font-semibold">Domingo marcado como descanso.</span>{" "}
-              No se ofrecen horas libres automáticas para ese día.
-            </div>
-          ) : loadingAvailability ? (
-            <div className="text-sm text-slate-700">
-              Cargando horas libres para{" "}
-              <span className="font-semibold">
-                {formatDurationLabel(selectedDurationMinutes)}
-              </span>
-              ...
-            </div>
-          ) : availabilityError ? (
-            <div className="text-sm text-red-700">{availabilityError}</div>
-          ) : noSlotsAvailable ? (
-            <div className="text-sm text-red-700">
-              No quedan horas libres para una duración de{" "}
-              <span className="font-semibold">
-                {formatDurationLabel(selectedDurationMinutes)}
-              </span>{" "}
-              en ese día.
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-sm text-slate-700">
-                Solo se muestran horas libres reales según el día y la duración
-                elegida.
-              </div>
-
-              {firstAvailableTime ? (
-                <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
-                  Primera hora libre: {firstAvailableTime}
-                </div>
-              ) : null}
-            </div>
-          )}
-        </div>
-
-        <label className="grid gap-2">
-          <span className="text-sm font-medium text-slate-700">Nota</span>
-          <input
-            type="text"
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
-            placeholder="Cambiar grifo, revisar enchufe..."
-          />
-        </label>
-
-        {error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
+              {saving ? "Guardando..." : "Guardar trabajo"}
+            </button>
           </div>
-        ) : null}
-
-        {success ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {success}
-          </div>
-        ) : null}
-
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={
-              isSundaySelected ||
-              saving ||
-              loadingAvailability ||
-              !!availabilityError ||
-              availableTimes.length === 0 ||
-              !startTime
-            }
-            className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saving ? "Guardando..." : "Guardar trabajo"}
-          </button>
-        </div>
-      </form>
-    </section>
+        </form>
+      </section>
+    </>
   );
 }

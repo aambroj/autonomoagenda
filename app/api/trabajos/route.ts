@@ -136,6 +136,7 @@ export async function POST(request: Request) {
 
     const duration_minutes = Number(body.duration_minutes);
     const status = "pendiente";
+    const committed_at = new Date().toISOString();
     const agendaStartDate = getAgendaStartDateInMadrid();
 
     if (!client_name) {
@@ -216,9 +217,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const blockingTrabajos = ((existingTrabajos as ExistingTrabajo[]) ?? []).filter(
-      (trabajo) => isBlockingStatus(trabajo.status)
-    );
+    const blockingTrabajos = (
+      (existingTrabajos as ExistingTrabajo[]) ?? []
+    ).filter((trabajo) => isBlockingStatus(trabajo.status));
 
     const conflict = blockingTrabajos.find((trabajo) => {
       const existingStartMinutes = timeToMinutes(trabajo.start_time);
@@ -259,6 +260,9 @@ export async function POST(request: Request) {
         duration_minutes,
         notes: notes || null,
         status,
+        committed_at,
+        done_at: null,
+        invoiced_at: null,
       })
       .select("*")
       .single();

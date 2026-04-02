@@ -142,14 +142,25 @@ export default function JobActions({
         ) : null}
 
         {normalizedStatus === "cancelado" ? (
-          <button
-            type="button"
-            onClick={() => updateStatus("pendiente", "reactivate")}
-            disabled={!!busyAction}
-            className="inline-flex rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
-          >
-            {busyAction === "reactivate" ? "Guardando..." : "Reactivar"}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => updateStatus("pendiente", "reactivate")}
+              disabled={!!busyAction}
+              className="inline-flex rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+            >
+              {busyAction === "reactivate" ? "Guardando..." : "Reactivar"}
+            </button>
+
+            <button
+              type="button"
+              onClick={deleteJob}
+              disabled={!!busyAction}
+              className="inline-flex rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+            >
+              {busyAction === "delete" ? "Borrando..." : "Eliminar"}
+            </button>
+          </>
         ) : null}
 
         {normalizedStatus === "facturado" ? (

@@ -17,6 +17,9 @@ type Trabajo = {
   duration_minutes: number;
   notes: string | null;
   status: string;
+  committed_at: string | null;
+  done_at: string | null;
+  invoiced_at: string | null;
 };
 
 type DayItem = {
@@ -43,6 +46,8 @@ type HomePageProps = {
     date?: string;
     time?: string;
     duration?: string;
+    quick?: string;
+    edit?: string;
   }>;
 };
 
@@ -115,16 +120,50 @@ function formatDateLabel(dateValue: string) {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-function formatShortDayLabel(dateValue: string) {
+function formatCompactWeekdayLabel(dateValue: string) {
   const date = dateValueToUtcDate(dateValue);
 
   const label = date.toLocaleDateString(MADRID_LOCALE, {
     timeZone: MADRID_TIME_ZONE,
     weekday: "short",
-    day: "numeric",
   });
 
   return label.charAt(0).toUpperCase() + label.slice(1).replace(".", "");
+}
+
+function formatCompactDayNumber(dateValue: string) {
+  const date = dateValueToUtcDate(dateValue);
+
+  return date.toLocaleDateString(MADRID_LOCALE, {
+    timeZone: MADRID_TIME_ZONE,
+    day: "numeric",
+  });
+}
+
+function formatStatusMoment(value: string | null | undefined) {
+  if (!value) return "Sin registrar";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Sin registrar";
+  }
+
+  const dateLabel = date.toLocaleDateString(MADRID_LOCALE, {
+    timeZone: MADRID_TIME_ZONE,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+
+  const timeLabel = date.toLocaleTimeString(MADRID_LOCALE, {
+    timeZone: MADRID_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+
+  return `${dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)} · ${timeLabel}`;
 }
 
 function isSundayDate(dateValue: string) {
@@ -220,11 +259,11 @@ function getStatusClasses(status: string) {
   }
 
   if (normalized === "hecho" || normalized === "terminado") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "border-sky-200 bg-sky-50 text-sky-700";
   }
 
   if (normalized === "facturado") {
-    return "border-sky-200 bg-sky-50 text-sky-700";
+    return "border-indigo-200 bg-indigo-50 text-indigo-700";
   }
 
   if (normalized === "archivado") {
@@ -259,11 +298,11 @@ function getMainTimeClasses(status: string) {
   }
 
   if (normalized === "hecho" || normalized === "terminado") {
-    return "text-[2.1rem] font-black tracking-tight text-emerald-700 sm:text-[2.45rem]";
+    return "text-[2.1rem] font-black tracking-tight text-sky-700 sm:text-[2.45rem]";
   }
 
   if (normalized === "facturado") {
-    return "text-[2.1rem] font-black tracking-tight text-sky-700 sm:text-[2.45rem]";
+    return "text-[2.1rem] font-black tracking-tight text-indigo-700 sm:text-[2.45rem]";
   }
 
   if (normalized === "archivado") {
@@ -281,11 +320,11 @@ function getDurationClasses(status: string) {
   }
 
   if (normalized === "hecho" || normalized === "terminado") {
-    return "inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-lg font-bold text-emerald-700";
+    return "inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-lg font-bold text-sky-700";
   }
 
   if (normalized === "facturado") {
-    return "inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-lg font-bold text-sky-700";
+    return "inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-lg font-bold text-indigo-700";
   }
 
   if (normalized === "archivado") {
@@ -464,9 +503,18 @@ function buildQuickAddHref(date: string, time: string, duration: number) {
     date,
     time,
     duration: String(duration),
+    quick: "1",
   });
 
   return `/?${params.toString()}#quick-add-job-form`;
+}
+
+function buildTrabajoHref(jobId: number) {
+  const params = new URLSearchParams({
+    edit: String(jobId),
+  });
+
+  return `/?${params.toString()}#trabajo-${jobId}`;
 }
 
 function getTotalFreeMinutes(gaps: TimeGap[]) {
@@ -552,14 +600,14 @@ function getCompactDayBadgeClasses(
   gapsCount: number
 ) {
   if (isNonWorking) {
-    return "inline-flex min-w-[88px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-rose-200 bg-rose-100 px-2.5 py-1 text-[11px] font-bold leading-none text-rose-700";
+    return "inline-flex min-w-[82px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-rose-200 bg-rose-100 px-2 py-1 text-[10px] font-bold leading-none text-rose-700";
   }
 
   if (gapsCount > 0) {
-    return "inline-flex min-w-[88px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-100 px-2.5 py-1 text-[11px] font-bold leading-none text-emerald-700";
+    return "inline-flex min-w-[82px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-100 px-2 py-1 text-[10px] font-bold leading-none text-emerald-700";
   }
 
-  return "inline-flex min-w-[88px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-red-200 bg-red-100 px-2.5 py-1 text-[11px] font-bold leading-none text-red-700";
+  return "inline-flex min-w-[82px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-red-200 bg-red-100 px-2 py-1 text-[10px] font-bold leading-none text-red-700";
 }
 
 function getDaySectionClasses(isSunday: boolean) {
@@ -739,8 +787,9 @@ function renderTrabajoCard(trabajo: Trabajo) {
 
   return (
     <article
+      id={`trabajo-${trabajo.id}`}
       key={trabajo.id}
-      className="rounded-3xl border border-slate-200 bg-white px-4 py-1.5 shadow-sm sm:px-4 sm:py-1.5"
+      className="scroll-mt-24 rounded-3xl border border-slate-200 bg-white px-4 py-1.5 shadow-sm ring-offset-2 target:ring-2 target:ring-sky-300 sm:px-4 sm:py-1.5"
     >
       <div className="grid gap-1.5">
         <div className="flex flex-col gap-1 lg:flex-row lg:items-start lg:justify-between">
@@ -786,6 +835,7 @@ function renderTrabajoCard(trabajo: Trabajo) {
                 startTime={trabajo.start_time}
                 durationMinutes={trabajo.duration_minutes}
                 notes={trabajo.notes}
+                status={trabajo.status}
               />
             ) : null}
 
@@ -835,34 +885,34 @@ function renderTrabajoCard(trabajo: Trabajo) {
 
           <div className="rounded-3xl border border-slate-200 bg-slate-50 p-1.5">
             <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Resumen rápido
+              Seguimiento del estado
             </p>
 
-            <div className="mt-1 grid grid-cols-3 gap-1.5">
-              <div className="rounded-2xl bg-white px-2.5 py-1">
-                <p className="text-[0.8rem] font-semibold uppercase tracking-wide text-slate-500">
-                  Inicio
+            <div className="mt-1 grid gap-1.5">
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2">
+                <p className="text-[0.8rem] font-semibold uppercase tracking-wide text-red-700">
+                  Comprometida
                 </p>
-                <p className="mt-0.5 text-[1.7rem] font-black leading-none text-slate-900 sm:text-[2rem]">
-                  {formatTime(trabajo.start_time)}
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-white px-2.5 py-1">
-                <p className="text-[0.8rem] font-semibold uppercase tracking-wide text-slate-500">
-                  Fin
-                </p>
-                <p className="mt-0.5 text-[1.7rem] font-black leading-none text-slate-900 sm:text-[2rem]">
-                  {addMinutes(trabajo.start_time, trabajo.duration_minutes)}
+                <p className="mt-1 text-sm font-bold leading-tight text-red-900 sm:text-base">
+                  {formatStatusMoment(trabajo.committed_at)}
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-white px-2.5 py-1">
-                <p className="text-[0.8rem] font-semibold uppercase tracking-wide text-slate-500">
-                  Tiempo
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 px-3 py-2">
+                <p className="text-[0.8rem] font-semibold uppercase tracking-wide text-sky-700">
+                  Hecha
                 </p>
-                <p className="mt-0.5 text-[1.7rem] font-black leading-none text-slate-900 sm:text-[2rem]">
-                  {formatJobDurationLabel(trabajo.duration_minutes)}
+                <p className="mt-1 text-sm font-bold leading-tight text-sky-900 sm:text-base">
+                  {formatStatusMoment(trabajo.done_at)}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2">
+                <p className="text-[0.8rem] font-semibold uppercase tracking-wide text-indigo-700">
+                  Facturada
+                </p>
+                <p className="mt-1 text-sm font-bold leading-tight text-indigo-900 sm:text-base">
+                  {formatStatusMoment(trabajo.invoiced_at)}
                 </p>
               </div>
             </div>
@@ -994,7 +1044,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       return {
         ...dayItem,
-        shortLabel: formatShortDayLabel(dayItem.date),
+        compactWeekday: formatCompactWeekdayLabel(dayItem.date),
+        compactDayNumber: formatCompactDayNumber(dayItem.date),
         isSunday: isSundayDate(dayItem.date),
         isNonWorkingDay: nonWorkingDay,
         items,
@@ -1057,7 +1108,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             initialQuery={query}
             initialStatus={status}
             initialDay={day}
-            availableDays={days}
+            availableDays={days.map((item) => ({
+              value: item.date,
+              label: item.label,
+            }))}
           />
         </div>
 
@@ -1074,16 +1128,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             title: `${summaryDateLabel} · Hechos`,
             value: doneCount,
             subtitle: "Trabajos realizados pendientes de cerrar.",
-            valueClasses: "text-emerald-700",
-            cardClasses: "border-emerald-200 bg-white",
+            valueClasses: "text-sky-700",
+            cardClasses: "border-sky-200 bg-white",
           })}
 
           {renderSummaryCard({
             title: "Facturados",
             value: invoicedCount,
             subtitle: "Pendientes de archivar.",
-            valueClasses: "text-sky-700",
-            cardClasses: "border-sky-200 bg-white",
+            valueClasses: "text-indigo-700",
+            cardClasses: "border-indigo-200 bg-white",
           })}
 
           {renderSummaryCard({
@@ -1124,7 +1178,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                     dayItem.isNonWorkingDay
                   )}`}
                 >
-                  <div className="flex justify-end">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                        {dayItem.compactWeekday}
+                      </p>
+                      <p className="mt-1 text-lg font-black leading-none text-slate-900">
+                        {dayItem.compactDayNumber}
+                      </p>
+                    </div>
+
                     <span
                       className={getCompactDayBadgeClasses(
                         dayItem.isNonWorkingDay,
@@ -1139,12 +1202,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                     </span>
                   </div>
 
-                  <div className="mt-2">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                      {dayItem.shortLabel}
-                    </p>
-
-                    <p className="mt-2 text-2xl font-black leading-none text-slate-900">
+                  <div className="mt-3">
+                    <p className="text-2xl font-black leading-none text-slate-900">
                       {dayItem.items.length}
                     </p>
                     <p className="mt-1 text-sm text-slate-600">
@@ -1218,7 +1277,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                     <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
                       Comprometidos: {dayItem.committedItemsCount}
                     </span>
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                    <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
                       Hechos: {dayItem.doneItemsCount}
                     </span>
                   </div>
@@ -1428,11 +1487,18 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                                       gap.start
                                     );
                                     const gapEndMinutes = timeToMinutes(gap.end);
+                                    const suggestedDuration =
+                                      getSuggestedDurationForGap(gap.minutes);
 
                                     return (
-                                      <div
+                                      <Link
                                         key={`timeline-gap-${dayItem.date}-${gap.start}-${gap.end}`}
-                                        className="absolute left-3 right-3 overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/90 px-3 py-2"
+                                        href={buildQuickAddHref(
+                                          dayItem.date,
+                                          gap.start,
+                                          suggestedDuration
+                                        )}
+                                        className="absolute left-3 right-3 overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/90 px-3 py-2 transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-sm"
                                         style={getTimelineGapBlockStyle({
                                           startMinutes: gapStartMinutes,
                                           endMinutes: gapEndMinutes,
@@ -1443,8 +1509,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                                           timelineHeightPx:
                                             dayItem.timelineHeightPx,
                                         })}
+                                        title={`Crear trabajo el ${dayItem.label} a las ${gap.start}`}
                                       >
-                                        <div className="flex items-start justify-between gap-3">
+                                        <div className="flex h-full cursor-pointer items-start justify-between gap-3">
                                           <div className="min-w-0">
                                             <p className="truncate text-xs font-bold uppercase tracking-wide text-emerald-700">
                                               Hueco libre
@@ -1457,7 +1524,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                                             {formatGapLabel(gap.minutes)}
                                           </span>
                                         </div>
-                                      </div>
+                                      </Link>
                                     );
                                   })}
 
@@ -1470,9 +1537,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                                       Number(trabajo.duration_minutes || 0);
 
                                     return (
-                                      <div
+                                      <Link
                                         key={`timeline-job-${trabajo.id}`}
-                                        className={`absolute left-3 right-3 overflow-hidden rounded-2xl border px-3 py-2 shadow-sm ${getTimelineJobClasses(
+                                        href={buildTrabajoHref(trabajo.id)}
+                                        className={`absolute left-3 right-3 overflow-hidden rounded-2xl border px-3 py-2 shadow-sm transition hover:shadow-md ${getTimelineJobClasses(
                                           trabajo.status
                                         )}`}
                                         style={getTimelineBlockStyle({
@@ -1486,8 +1554,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                                             dayItem.timelineHeightPx,
                                           minHeightPx: 46,
                                         })}
+                                        title={`Editar trabajo de ${trabajo.client_name}`}
                                       >
-                                        <div className="flex items-start justify-between gap-3">
+                                        <div className="flex h-full cursor-pointer items-start justify-between gap-3">
                                           <div className="min-w-0">
                                             <p className="truncate text-sm font-black">
                                               {trabajo.client_name}
@@ -1509,7 +1578,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                                             {getStatusLabel(trabajo.status)}
                                           </span>
                                         </div>
-                                      </div>
+                                      </Link>
                                     );
                                   })}
                                 </div>

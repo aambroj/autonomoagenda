@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type EditJobButtonProps = {
   jobId: number;
@@ -12,6 +12,7 @@ type EditJobButtonProps = {
   startTime: string;
   durationMinutes: number;
   notes: string | null;
+  status: string;
 };
 
 type AvailabilityResponse = {
@@ -42,9 +43,64 @@ function formatDurationLabel(minutes: number) {
   return `${minutes} min`;
 }
 
+function timeToMinutes(value: string) {
+  const [hourText, minuteText] = value.slice(0, 5).split(":");
+  return Number(hourText) * 60 + Number(minuteText);
+}
+
+function normalizeStatus(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function getStatusLabel(status: string) {
+  const normalized = normalizeStatus(status);
+
+  if (normalized === "pendiente") return "Comprometido";
+  if (normalized === "hecho") return "Hecho";
+  if (normalized === "facturado") return "Facturado";
+  if (normalized === "cancelado") return "Cancelado";
+  if (normalized === "archivado") return "Archivado";
+
+  return status;
+}
+
+function getStatusBadgeClasses(status: string) {
+  const normalized = normalizeStatus(status);
+
+  if (normalized === "pendiente") {
+    return "border-red-600 bg-red-600 text-white";
+  }
+
+  if (normalized === "hecho") {
+    return "border-sky-200 bg-sky-50 text-sky-700";
+  }
+
+  if (normalized === "facturado") {
+    return "border-indigo-200 bg-indigo-50 text-indigo-700";
+  }
+
+  if (normalized === "cancelado") {
+    return "border-red-200 bg-red-50 text-red-700";
+  }
+
+  if (normalized === "archivado") {
+    return "border-slate-300 bg-slate-100 text-slate-700";
+  }
+
+  return "border-slate-200 bg-slate-50 text-slate-700";
+}
+
 export default function EditJobButton(props: EditJobButtonProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const today = useMemo(() => toDateValue(new Date()), []);
+  const originalStartTime = useMemo(
+    () => props.startTime.slice(0, 5),
+    [props.startTime]
+  );
+
+  const queryEdit = searchParams.get("edit") || "";
+  const shouldOpenFromQuery = queryEdit === String(props.jobId);
 
   const [open, setOpen] = useState(false);
 
@@ -52,11 +108,12 @@ export default function EditJobButton(props: EditJobButtonProps) {
   const [phone, setPhone] = useState(props.phone ?? "");
   const [address, setAddress] = useState(props.address ?? "");
   const [workDate, setWorkDate] = useState(props.workDate);
-  const [startTime, setStartTime] = useState(props.startTime.slice(0, 5));
+  const [startTime, setStartTime] = useState(originalStartTime);
   const [durationMinutes, setDurationMinutes] = useState(
     String(props.durationMinutes)
   );
   const [notes, setNotes] = useState(props.notes ?? "");
+  const [currentStatus, setCurrentStatus] = useState(props.status);
 
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
@@ -65,19 +122,75 @@ export default function EditJobButton(props: EditJobButtonProps) {
   );
 
   const [saving, setSaving] = useState(false);
+  const [busyStatusAction, setBusyStatusAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function resetForm() {
+  const selectableTimes = useMemo(() => {
+    const merged = [...availableTimes];
+
+    if (workDate === props.workDate && !merged.includes(originalStartTime)) {
+      merged.push(originalStartTime);
+    }
+
+    return merged.sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
+  }, [availableTimes, workDate, props.workDate, originalStartTime]);
+
+  const resetForm = useCallback(() => {
     setClientName(props.clientName);
     setPhone(props.phone ?? "");
     setAddress(props.address ?? "");
     setWorkDate(props.workDate);
-    setStartTime(props.startTime.slice(0, 5));
+    setStartTime(originalStartTime);
     setDurationMinutes(String(props.durationMinutes));
     setNotes(props.notes ?? "");
+    setCurrentStatus(props.status);
     setError(null);
     setAvailabilityError(null);
-  }
+  }, [
+    props.clientName,
+    props.phone,
+    props.address,
+    props.workDate,
+    props.durationMinutes,
+    props.notes,
+    props.status,
+    originalStartTime,
+  ]);
+
+  const closeModal = useCallback(() => {
+    setOpen(false);
+    setError(null);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("edit");
+
+    const nextQuery = params.toString();
+    const nextUrl = nextQuery ? `/?${nextQuery}` : "/";
+
+    router.replace(nextUrl, { scroll: false });
+  }, [router, searchParams]);
+
+  useEffect(() => {
+    if (shouldOpenFromQuery) {
+      resetForm();
+      setOpen(true);
+    }
+  }, [shouldOpenFromQuery, resetForm]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeModal();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, closeModal]);
 
   useEffect(() => {
     if (!open) return;
@@ -114,8 +227,16 @@ export default function EditJobButton(props: EditJobButtonProps) {
         setAvailableTimes(slots);
 
         setStartTime((current) => {
-          if (current && slots.includes(current)) {
+          if (
+            current &&
+            (slots.includes(current) ||
+              (workDate === props.workDate && current === originalStartTime))
+          ) {
             return current;
+          }
+
+          if (workDate === props.workDate) {
+            return originalStartTime;
           }
 
           return slots[0] ?? "";
@@ -143,7 +264,14 @@ export default function EditJobButton(props: EditJobButtonProps) {
     return () => {
       cancelled = true;
     };
-  }, [open, workDate, durationMinutes, props.jobId]);
+  }, [
+    open,
+    workDate,
+    durationMinutes,
+    props.jobId,
+    props.workDate,
+    originalStartTime,
+  ]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -173,7 +301,7 @@ export default function EditJobButton(props: EditJobButtonProps) {
         throw new Error(result?.error || "No se pudo guardar el trabajo.");
       }
 
-      setOpen(false);
+      closeModal();
       router.refresh();
     } catch (error) {
       const message =
@@ -183,6 +311,42 @@ export default function EditJobButton(props: EditJobButtonProps) {
       setSaving(false);
     }
   }
+
+  async function updateStatus(nextStatus: string, actionLabel: string) {
+    setBusyStatusAction(actionLabel);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/trabajos/${props.jobId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: nextStatus,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error || "No se pudo cambiar el estado.");
+      }
+
+      setCurrentStatus(nextStatus);
+      closeModal();
+      router.refresh();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "No se pudo cambiar el estado.";
+      setError(message);
+    } finally {
+      setBusyStatusAction(null);
+    }
+  }
+
+  const normalizedCurrentStatus = normalizeStatus(currentStatus);
+  const isBusy = saving || !!busyStatusAction;
 
   return (
     <>
@@ -198,25 +362,129 @@ export default function EditJobButton(props: EditJobButtonProps) {
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+          <button
+            type="button"
+            aria-label="Cerrar edición"
+            onClick={closeModal}
+            className="absolute inset-0 bg-black/40"
+          />
+
+          <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-xl font-bold text-slate-900">
-                  Editar trabajo
-                </h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-xl font-bold text-slate-900">
+                    Editar trabajo
+                  </h3>
+                  <span
+                    className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getStatusBadgeClasses(
+                      currentStatus
+                    )}`}
+                  >
+                    {getStatusLabel(currentStatus)}
+                  </span>
+                </div>
+
                 <p className="mt-1 text-sm text-slate-600">
-                  Ajusta datos, fecha, hora y duración sin crear un trabajo nuevo.
+                  Ajusta datos, fecha, hora y duración sin crear un trabajo
+                  nuevo.
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={closeModal}
                 className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
               >
                 Cerrar
               </button>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+              <p className="text-sm font-semibold text-slate-800">
+                Acciones rápidas
+              </p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {normalizedCurrentStatus === "pendiente" ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => updateStatus("hecho", "done")}
+                      disabled={isBusy}
+                      className="inline-flex rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+                    >
+                      {busyStatusAction === "done"
+                        ? "Guardando..."
+                        : "Marcar hecho"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => updateStatus("cancelado", "cancel")}
+                      disabled={isBusy}
+                      className="inline-flex rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+                    >
+                      {busyStatusAction === "cancel"
+                        ? "Guardando..."
+                        : "Cancelar"}
+                    </button>
+                  </>
+                ) : null}
+
+                {normalizedCurrentStatus === "hecho" ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => updateStatus("facturado", "invoice")}
+                      disabled={isBusy}
+                      className="inline-flex rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-xs font-bold text-indigo-700 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+                    >
+                      {busyStatusAction === "invoice"
+                        ? "Guardando..."
+                        : "Marcar facturado"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => updateStatus("pendiente", "reopen")}
+                      disabled={isBusy}
+                      className="inline-flex rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+                    >
+                      {busyStatusAction === "reopen"
+                        ? "Guardando..."
+                        : "Volver a comprometido"}
+                    </button>
+                  </>
+                ) : null}
+
+                {normalizedCurrentStatus === "cancelado" ? (
+                  <button
+                    type="button"
+                    onClick={() => updateStatus("pendiente", "reactivate")}
+                    disabled={isBusy}
+                    className="inline-flex rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+                  >
+                    {busyStatusAction === "reactivate"
+                      ? "Guardando..."
+                      : "Reactivar"}
+                  </button>
+                ) : null}
+
+                {normalizedCurrentStatus === "facturado" ? (
+                  <button
+                    type="button"
+                    onClick={() => updateStatus("archivado", "archive")}
+                    disabled={isBusy}
+                    className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+                  >
+                    {busyStatusAction === "archive"
+                      ? "Guardando..."
+                      : "Archivar"}
+                  </button>
+                ) : null}
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} className="mt-5 grid gap-4">
@@ -286,17 +554,18 @@ export default function EditJobButton(props: EditJobButtonProps) {
                     disabled={
                       loadingAvailability ||
                       !!availabilityError ||
-                      availableTimes.length === 0
+                      selectableTimes.length === 0 ||
+                      !!busyStatusAction
                     }
                   >
                     {loadingAvailability ? (
                       <option value="">Cargando horas libres...</option>
                     ) : availabilityError ? (
                       <option value="">No disponible</option>
-                    ) : availableTimes.length === 0 ? (
+                    ) : selectableTimes.length === 0 ? (
                       <option value="">Sin horas libres</option>
                     ) : (
-                      availableTimes.map((slot) => (
+                      selectableTimes.map((slot) => (
                         <option key={slot} value={slot}>
                           {slot}
                         </option>
@@ -313,6 +582,7 @@ export default function EditJobButton(props: EditJobButtonProps) {
                     value={durationMinutes}
                     onChange={(event) => setDurationMinutes(event.target.value)}
                     className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
+                    disabled={!!busyStatusAction}
                   >
                     <option value="30">30 min</option>
                     <option value="45">45 min</option>
@@ -345,7 +615,7 @@ export default function EditJobButton(props: EditJobButtonProps) {
                   </span>
                 ) : availabilityError ? (
                   <span className="text-red-700">{availabilityError}</span>
-                ) : availableTimes.length === 0 ? (
+                ) : selectableTimes.length === 0 ? (
                   <span className="text-red-700">
                     No quedan horas libres para esa duración en ese día.
                   </span>
@@ -364,6 +634,7 @@ export default function EditJobButton(props: EditJobButtonProps) {
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
                   className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
+                  disabled={!!busyStatusAction}
                 />
               </label>
 
@@ -376,8 +647,9 @@ export default function EditJobButton(props: EditJobButtonProps) {
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setOpen(false)}
+                  onClick={closeModal}
                   className="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  disabled={isBusy}
                 >
                   Cancelar
                 </button>
@@ -388,8 +660,9 @@ export default function EditJobButton(props: EditJobButtonProps) {
                     saving ||
                     loadingAvailability ||
                     !!availabilityError ||
-                    availableTimes.length === 0 ||
-                    !startTime
+                    selectableTimes.length === 0 ||
+                    !startTime ||
+                    !!busyStatusAction
                   }
                   className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
