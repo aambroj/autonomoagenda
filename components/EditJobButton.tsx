@@ -428,7 +428,7 @@ export default function EditJobButton(props: EditJobButtonProps) {
                     >
                       {busyStatusAction === "cancel"
                         ? "Guardando..."
-                        : "Cancelar"}
+                        : "Cancelar el trabajo"}
                     </button>
                   </>
                 ) : null}

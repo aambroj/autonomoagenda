@@ -38,6 +38,12 @@ type TimelineMark = {
   offsetMinutes: number;
 };
 
+type TimelineGuideMark = {
+  label: string | null;
+  offsetMinutes: number;
+  major: boolean;
+};
+
 type HomePageProps = {
   searchParams?: Promise<{
     q?: string;
@@ -288,6 +294,28 @@ function getStatusLabel(status: string) {
   if (normalized === "archivado") return "Archivado";
 
   return status;
+}
+
+function getTimelineStatusPillClasses(status: string) {
+  const normalized = status.trim().toLowerCase();
+
+  if (normalized === "pendiente") {
+    return "border-red-200 bg-white/85 text-red-700";
+  }
+
+  if (normalized === "hecho" || normalized === "terminado") {
+    return "border-sky-200 bg-white/85 text-sky-700";
+  }
+
+  if (normalized === "facturado") {
+    return "border-indigo-200 bg-white/85 text-indigo-700";
+  }
+
+  if (normalized === "archivado") {
+    return "border-slate-200 bg-white/85 text-slate-600";
+  }
+
+  return "border-slate-200 bg-white/85 text-slate-700";
 }
 
 function getMainTimeClasses(status: string) {
@@ -627,11 +655,11 @@ function getNonWorkingBadgeClasses() {
 }
 
 function getRestPanelClasses() {
-  return "rounded-3xl border border-rose-200 bg-rose-50 px-5 py-5";
+  return "overflow-hidden rounded-[2rem] border border-rose-200 bg-rose-50 px-5 py-5 shadow-sm";
 }
 
 function getTimelineHeightPx(visibleWindowMinutes: number) {
-  return Math.max(240, Math.round(visibleWindowMinutes * 0.8));
+  return Math.max(320, Math.round(visibleWindowMinutes * 1.05));
 }
 
 function buildTimelineMarks(
@@ -660,6 +688,44 @@ function buildTimelineMarks(
   }
 
   return marks;
+}
+
+function buildTimelineGuideMarks(
+  visibleStartMinutes: number,
+  visibleEndMinutes: number
+) {
+  const marks: TimelineGuideMark[] = [];
+  let current = visibleStartMinutes;
+
+  while (current <= visibleEndMinutes) {
+    const isHour = current % 60 === 0;
+    marks.push({
+      label:
+        current === visibleStartMinutes || isHour ? minutesToTime(current) : null,
+      offsetMinutes: current - visibleStartMinutes,
+      major: isHour || current === visibleStartMinutes,
+    });
+
+    current += 30;
+  }
+
+  return marks;
+}
+
+function getTimelineCanvasStyle() {
+  return {
+    backgroundImage: [
+      "linear-gradient(to bottom, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%)",
+      "linear-gradient(to right, rgba(148,163,184,0.05) 1px, transparent 1px)",
+    ].join(", "),
+    backgroundSize: "100% 100%, 24px 24px",
+  } as const;
+}
+
+function getTimelineGridLineClasses(major: boolean) {
+  return major
+    ? "absolute left-0 right-0 border-t border-slate-300/70"
+    : "absolute left-0 right-0 border-t border-dashed border-slate-200/90";
 }
 
 function getTimelineBlockStyle(params: {
@@ -693,15 +759,17 @@ function getTimelineBlockStyle(params: {
   const rawHeightPx =
     ((safeEnd - safeStart) / visibleWindowMinutes) * timelineHeightPx;
 
-  const heightPx = Math.max(minHeightPx, rawHeightPx);
+  const heightPx =
+    rawHeightPx < minHeightPx ? rawHeightPx : Math.max(minHeightPx, rawHeightPx);
+
   const clampedHeightPx = Math.max(
-    minHeightPx,
-    Math.min(heightPx, timelineHeightPx - topPx)
+    Math.min(heightPx, timelineHeightPx - topPx),
+    Math.min(rawHeightPx, timelineHeightPx - topPx)
   );
 
   return {
     top: `${Math.max(0, topPx)}px`,
-    height: `${Math.max(minHeightPx, clampedHeightPx)}px`,
+    height: `${Math.max(0, clampedHeightPx)}px`,
   };
 }
 
@@ -714,7 +782,7 @@ function getTimelineGapBlockStyle(params: {
 }) {
   const base = getTimelineBlockStyle({
     ...params,
-    minHeightPx: 28,
+    minHeightPx: 32,
   });
 
   return {
@@ -964,8 +1032,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const summaryDateLabel = day
     ? formatDateLabel(day)
     : agendaStartDateInMadrid === todayInMadrid
-    ? "Hoy"
-    : formatDateLabel(agendaStartDateInMadrid);
+      ? "Hoy"
+      : formatDateLabel(agendaStartDateInMadrid);
 
   const committedCount = filteredTrabajos.filter(
     (trabajo) =>
@@ -1067,6 +1135,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         timelineMarks: nonWorkingDay
           ? []
           : buildTimelineMarks(visibleDayStartMinutes, visibleDayEndMinutes),
+        timelineGuideMarks: nonWorkingDay
+          ? []
+          : buildTimelineGuideMarks(
+              visibleDayStartMinutes,
+              visibleDayEndMinutes
+            ),
       };
     })
     .filter((dayItem) => {
@@ -1197,8 +1271,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                       {dayItem.isNonWorkingDay
                         ? "Descanso"
                         : dayItem.gaps.length > 0
-                        ? "Huecos"
-                        : "Lleno"}
+                          ? "Huecos"
+                          : "Lleno"}
                     </span>
                   </div>
 
@@ -1303,7 +1377,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   <section
                     id={`day-${dayItem.date}`}
                     key={dayItem.date}
-                    className={`scroll-mt-24 rounded-3xl border p-5 shadow-sm sm:p-6 ${getDaySectionClasses(
+                    className={`scroll-mt-24 overflow-hidden rounded-3xl border p-5 shadow-sm sm:p-6 ${getDaySectionClasses(
                       dayItem.isSunday
                     )}`}
                   >
@@ -1324,21 +1398,21 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                         <p className="mt-2 text-base text-slate-500 sm:text-lg">
                           {dayItem.isNonWorkingDay
                             ? dayItem.items.length > 0
-                              ? `Día no laborable por defecto. Hay ${dayItem.items.length} trabajo${
+                              ? `Día de descanso. Hay ${dayItem.items.length} trabajo${
                                   dayItem.items.length === 1 ? "" : "s"
                                 } guardado${
                                   dayItem.items.length === 1 ? "" : "s"
                                 } manualmente.`
-                              : "Día no laborable por defecto."
+                              : "Día de descanso sin trabajos en agenda."
                             : hasActiveFilters
-                            ? `${dayItem.items.length} resultado${
-                                dayItem.items.length === 1 ? "" : "s"
-                              } en este día`
-                            : dayItem.blockingItems.length === 0
-                            ? "Sin trabajos ocupando agenda"
-                            : `${dayItem.blockingItems.length} trabajo${
-                                dayItem.blockingItems.length === 1 ? "" : "s"
-                              } en agenda`}
+                              ? `${dayItem.items.length} resultado${
+                                  dayItem.items.length === 1 ? "" : "s"
+                                } en este día`
+                              : dayItem.blockingItems.length === 0
+                                ? "Sin trabajos ocupando agenda"
+                                : `${dayItem.blockingItems.length} trabajo${
+                                    dayItem.blockingItems.length === 1 ? "" : "s"
+                                  } en agenda`}
                         </p>
                       </div>
 
@@ -1347,21 +1421,21 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                           dayItem.isNonWorkingDay
                             ? "bg-rose-100 text-rose-700"
                             : hasActiveFilters
-                            ? "bg-slate-100 text-slate-700"
-                            : dayItem.gaps.length > 0
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "bg-red-50 text-red-700"
+                              ? "bg-slate-100 text-slate-700"
+                              : dayItem.gaps.length > 0
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-red-50 text-red-700"
                         }`}
                       >
                         {dayItem.isNonWorkingDay
                           ? "Descanso"
                           : hasActiveFilters
-                          ? `${dayItem.items.length} resultado${
-                              dayItem.items.length === 1 ? "" : "s"
-                            }`
-                          : dayItem.gaps.length > 0
-                          ? "Con huecos"
-                          : "Completo"}
+                            ? `${dayItem.items.length} resultado${
+                                dayItem.items.length === 1 ? "" : "s"
+                              }`
+                            : dayItem.gaps.length > 0
+                              ? "Con huecos"
+                              : "Completo"}
                       </span>
                     </div>
 
@@ -1373,12 +1447,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
                                   <p className="text-lg font-bold text-rose-800 sm:text-xl">
-                                    Día de descanso
+                                    Descanso semanal
                                   </p>
                                   <p className="mt-2 text-sm text-rose-700 sm:text-base">
-                                    Este día está marcado como no laborable por
-                                    defecto. No se generan huecos automáticos ni
-                                    disponibilidad sugerida.
+                                    Este día queda cerrado por descanso. No se
+                                    generan huecos automáticos ni disponibilidad
+                                    sugerida.
                                   </p>
 
                                   {dayItem.items.length > 0 ? (
@@ -1402,14 +1476,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                                 dayItem.isSunday
                               )}`}
                             >
-                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                                 <div>
                                   <p className="text-base font-bold text-slate-800 sm:text-lg">
                                     Agenda visual del día
                                   </p>
                                   <p className="mt-1 text-sm text-slate-500">
-                                    Trabajos colocados por hora para verlo de un
-                                    vistazo.
+                                    Vista vertical tipo calendario para detectar
+                                    rápido bloques ocupados y huecos reales.
                                   </p>
                                 </div>
 
@@ -1429,14 +1503,68 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                                 </div>
                               </div>
 
-                              <div className="mt-3 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-600">
+                              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    Trabajos en agenda
+                                  </p>
+                                  <p className="mt-1 text-2xl font-black leading-none text-slate-900">
+                                    {dayItem.blockingItems.length}
+                                  </p>
+                                  <p className="mt-1 text-sm text-slate-500">
+                                    Bloques que ocupan tiempo real.
+                                  </p>
+                                </div>
+
+                                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    Ventana visible
+                                  </p>
+                                  <p className="mt-1 text-2xl font-black leading-none text-slate-900">
+                                    {formatGapLabel(dayItem.visibleWindowMinutes)}
+                                  </p>
+                                  <p className="mt-1 text-sm text-slate-500">
+                                    Desde {minutesToTime(dayItem.visibleDayStartMinutes)}.
+                                  </p>
+                                </div>
+
+                                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    Primera libre
+                                  </p>
+                                  <p className="mt-1 text-2xl font-black leading-none text-slate-900">
+                                    {dayItem.firstFreeTime ?? "--:--"}
+                                  </p>
+                                  <p className="mt-1 text-sm text-slate-500">
+                                    Primer hueco disponible del día.
+                                  </p>
+                                </div>
+
+                                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    Hueco más largo
+                                  </p>
+                                  <p className="mt-1 text-2xl font-black leading-none text-slate-900">
+                                    {dayItem.longestGap
+                                      ? formatGapLabel(dayItem.longestGap.minutes)
+                                      : "0 min"}
+                                  </p>
+                                  <p className="mt-1 text-sm text-slate-500">
+                                    {dayItem.longestGap
+                                      ? `${dayItem.longestGap.start} - ${dayItem.longestGap.end}`
+                                      : "Sin hueco suficiente"}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-600">
                                 Visible desde{" "}
                                 {minutesToTime(dayItem.visibleDayStartMinutes)}{" "}
                                 hasta{" "}
                                 {minutesToTime(dayItem.visibleDayEndMinutes)}
                               </div>
 
-                              <div className="mt-4 grid gap-4 lg:grid-cols-[88px_1fr]">
+                              <div className="mt-5 grid gap-4 lg:grid-cols-[94px_1fr]">
                                 <div
                                   className="relative hidden lg:block"
                                   style={{
@@ -1452,22 +1580,29 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                                     return (
                                       <div
                                         key={`mark-label-${dayItem.date}-${mark.label}`}
-                                        className="absolute left-0 -translate-y-1/2 text-xs font-bold text-slate-500"
+                                        className="absolute left-0 -translate-y-1/2"
                                         style={{ top: `${topPx}px` }}
                                       >
-                                        {mark.label}
+                                        <span className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600 shadow-sm">
+                                          {mark.label}
+                                        </span>
                                       </div>
                                     );
                                   })}
                                 </div>
 
                                 <div
-                                  className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white"
+                                  className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-50 shadow-inner"
                                   style={{
                                     height: `${dayItem.timelineHeightPx}px`,
                                   }}
                                 >
-                                  {dayItem.timelineMarks.map((mark) => {
+                                  <div
+                                    className="absolute inset-0"
+                                    style={getTimelineCanvasStyle()}
+                                  />
+
+                                  {dayItem.timelineGuideMarks.map((mark) => {
                                     const topPx =
                                       (mark.offsetMinutes /
                                         dayItem.visibleWindowMinutes) *
@@ -1475,12 +1610,35 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
                                     return (
                                       <div
-                                        key={`mark-line-${dayItem.date}-${mark.label}`}
-                                        className="absolute left-0 right-0 border-t border-dashed border-slate-200"
+                                        key={`guide-${dayItem.date}-${mark.offsetMinutes}`}
+                                        className={getTimelineGridLineClasses(
+                                          mark.major
+                                        )}
                                         style={{ top: `${topPx}px` }}
                                       />
                                     );
                                   })}
+
+                                  {dayItem.timelineGuideMarks
+                                    .filter((mark) => Boolean(mark.label))
+                                    .map((mark) => {
+                                      const topPx =
+                                        (mark.offsetMinutes /
+                                          dayItem.visibleWindowMinutes) *
+                                        dayItem.timelineHeightPx;
+
+                                      return (
+                                        <div
+                                          key={`guide-mobile-${dayItem.date}-${mark.offsetMinutes}`}
+                                          className="absolute left-3 top-0 lg:hidden"
+                                          style={{ top: `${topPx}px` }}
+                                        >
+                                          <span className="inline-flex -translate-y-1/2 rounded-full border border-slate-200 bg-white/90 px-2 py-0.5 text-[10px] font-bold text-slate-500 shadow-sm">
+                                            {mark.label}
+                                          </span>
+                                        </div>
+                                      );
+                                    })}
 
                                   {dayItem.gaps.map((gap) => {
                                     const gapStartMinutes = timeToMinutes(
@@ -1498,7 +1656,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                                           gap.start,
                                           suggestedDuration
                                         )}
-                                        className="absolute left-3 right-3 overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/90 px-3 py-2 transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-sm"
+                                        className="absolute left-3 right-3 overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/90 px-4 py-2 transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-sm"
                                         style={getTimelineGapBlockStyle({
                                           startMinutes: gapStartMinutes,
                                           endMinutes: gapEndMinutes,
@@ -1511,18 +1669,24 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                                         })}
                                         title={`Crear trabajo el ${dayItem.label} a las ${gap.start}`}
                                       >
-                                        <div className="flex h-full cursor-pointer items-start justify-between gap-3">
-                                          <div className="min-w-0">
-                                            <p className="truncate text-xs font-bold uppercase tracking-wide text-emerald-700">
+                                        <div className="flex h-full items-center overflow-hidden whitespace-nowrap">
+                                          <div className="min-w-0 truncate text-[15px] font-bold tabular-nums text-emerald-900 sm:text-base">
+                                            <span className="font-black uppercase tracking-wide text-emerald-700">
                                               Hueco libre
-                                            </p>
-                                            <p className="truncate text-sm font-bold text-emerald-900">
-                                              {gap.start} - {gap.end}
-                                            </p>
+                                            </span>
+                                            <span className="mx-2 text-emerald-500">
+                                              ·
+                                            </span>
+                                            <span>{gap.start}</span>
+                                            <span className="mx-1.5 text-emerald-500">
+                                              -
+                                            </span>
+                                            <span>{gap.end}</span>
+                                            <span className="mx-2 text-emerald-500">
+                                              ·
+                                            </span>
+                                            <span>{formatGapLabel(gap.minutes)}</span>
                                           </div>
-                                          <span className="shrink-0 text-xs font-bold text-emerald-700">
-                                            {formatGapLabel(gap.minutes)}
-                                          </span>
                                         </div>
                                       </Link>
                                     );
@@ -1540,7 +1704,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                                       <Link
                                         key={`timeline-job-${trabajo.id}`}
                                         href={buildTrabajoHref(trabajo.id)}
-                                        className={`absolute left-3 right-3 overflow-hidden rounded-2xl border px-3 py-2 shadow-sm transition hover:shadow-md ${getTimelineJobClasses(
+                                        className={`absolute left-3 right-3 overflow-hidden rounded-2xl border px-4 py-2 shadow-sm transition hover:shadow-md ${getTimelineJobClasses(
                                           trabajo.status
                                         )}`}
                                         style={getTimelineBlockStyle({
@@ -1552,29 +1716,45 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                                             dayItem.visibleDayEndMinutes,
                                           timelineHeightPx:
                                             dayItem.timelineHeightPx,
-                                          minHeightPx: 46,
+                                          minHeightPx: 38,
                                         })}
                                         title={`Editar trabajo de ${trabajo.client_name}`}
                                       >
-                                        <div className="flex h-full cursor-pointer items-start justify-between gap-3">
-                                          <div className="min-w-0">
-                                            <p className="truncate text-sm font-black">
+                                        <div className="flex h-full items-center justify-between gap-3 overflow-hidden whitespace-nowrap">
+                                          <div className="min-w-0 flex-1 truncate text-[15px] font-bold tabular-nums sm:text-base">
+                                            <span className="font-black">
                                               {trabajo.client_name}
-                                            </p>
-                                            <p className="truncate text-xs font-semibold opacity-90">
-                                              {formatTime(trabajo.start_time)} -{" "}
+                                            </span>
+                                            <span className="mx-2 opacity-50">
+                                              ·
+                                            </span>
+                                            <span>
+                                              {formatTime(trabajo.start_time)}
+                                            </span>
+                                            <span className="mx-1.5 opacity-50">
+                                              -
+                                            </span>
+                                            <span>
                                               {addMinutes(
                                                 trabajo.start_time,
                                                 trabajo.duration_minutes
-                                              )}{" "}
-                                              ·{" "}
+                                              )}
+                                            </span>
+                                            <span className="mx-2 opacity-50">
+                                              ·
+                                            </span>
+                                            <span>
                                               {formatJobDurationLabel(
                                                 trabajo.duration_minutes
                                               )}
-                                            </p>
+                                            </span>
                                           </div>
 
-                                          <span className="shrink-0 rounded-full bg-white/70 px-2.5 py-1 text-[11px] font-bold">
+                                          <span
+                                            className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-black ${getTimelineStatusPillClasses(
+                                              trabajo.status
+                                            )}`}
+                                          >
                                             {getStatusLabel(trabajo.status)}
                                           </span>
                                         </div>
@@ -1788,11 +1968,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
                     {dayItem.items.length === 0 ? (
                       !hasActiveFilters ? (
-                        dayItem.isNonWorkingDay ? (
-                          <div className="mt-5 rounded-3xl border border-dashed border-rose-300 bg-rose-100/60 px-5 py-4 text-base font-semibold text-rose-700 sm:text-lg">
-                            Día de descanso sin huecos automáticos.
-                          </div>
-                        ) : (
+                        dayItem.isNonWorkingDay ? null : (
                           <div className="mt-5 rounded-3xl border border-dashed border-emerald-200 bg-emerald-50 px-5 py-4 text-base font-semibold text-emerald-700 sm:text-lg">
                             No tienes nada apuntado este día.
                           </div>
