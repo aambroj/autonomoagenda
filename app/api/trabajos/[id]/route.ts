@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseServer } from "@/lib/supabase-server";
 
 type RouteContext = {
   params: Promise<{
@@ -39,6 +39,8 @@ type TrabajoRow = {
   committed_at: string | null;
   done_at: string | null;
   invoiced_at: string | null;
+  cancelled_at: string | null;
+  archived_at: string | null;
 };
 
 type StatusUpdatePayload = {
@@ -46,7 +48,14 @@ type StatusUpdatePayload = {
   committed_at?: string | null;
   done_at?: string | null;
   invoiced_at?: string | null;
+  cancelled_at?: string | null;
+  archived_at?: string | null;
 };
+
+const MADRID_TIME_ZONE = "Europe/Madrid";
+const WORK_DAY_START = "08:00";
+const WORK_DAY_END = "20:00";
+const MAX_FUTURE_DAYS = 30;
 
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -83,6 +92,71 @@ function addMinutes(time: string, minutes: number) {
   return minutesToTime(timeToMinutes(time) + minutes);
 }
 
+function toDateValue(date: Date) {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function dateValueToUtcDate(dateValue: string) {
+  const [year, month, day] = dateValue.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+}
+
+function addDaysToDateValue(dateValue: string, days: number) {
+  const date = dateValueToUtcDate(dateValue);
+  date.setUTCDate(date.getUTCDate() + days);
+  return toDateValue(date);
+}
+
+function getMadridNowParts() {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: MADRID_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+
+  const parts = formatter.formatToParts(new Date());
+
+  const year = parts.find((part) => part.type === "year")?.value ?? "0000";
+  const month = parts.find((part) => part.type === "month")?.value ?? "01";
+  const day = parts.find((part) => part.type === "day")?.value ?? "01";
+  const hour = Number(
+    parts.find((part) => part.type === "hour")?.value ?? "0"
+  );
+  const minute = Number(
+    parts.find((part) => part.type === "minute")?.value ?? "0"
+  );
+
+  return {
+    dateValue: `${year}-${month}-${day}`,
+    hour,
+    minute,
+  };
+}
+
+function getAgendaStartDateInMadrid() {
+  const { dateValue, hour, minute } = getMadridNowParts();
+  const currentMinutes = hour * 60 + minute;
+  const workEndMinutes = timeToMinutes(WORK_DAY_END);
+
+  if (currentMinutes >= workEndMinutes) {
+    return addDaysToDateValue(dateValue, 1);
+  }
+
+  return dateValue;
+}
+
+function getAgendaMaxDateInMadrid() {
+  const { dateValue } = getMadridNowParts();
+  return addDaysToDateValue(dateValue, MAX_FUTURE_DAYS);
+}
+
 function canTransition(currentStatus: string, nextStatus: string) {
   if (currentStatus === nextStatus) return true;
 
@@ -114,21 +188,9 @@ function isBlockingStatus(status: string) {
   );
 }
 
-function getTodayInMadrid() {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Madrid",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-
-  const parts = formatter.formatToParts(new Date());
-
-  const year = parts.find((part) => part.type === "year")?.value ?? "0000";
-  const month = parts.find((part) => part.type === "month")?.value ?? "01";
-  const day = parts.find((part) => part.type === "day")?.value ?? "01";
-
-  return `${year}-${month}-${day}`;
+function canDeletePermanently(status: string) {
+  const normalized = normalizeStatus(status);
+  return normalized === "archivado" || normalized === "cancelado";
 }
 
 function buildStatusUpdatePayload(
@@ -148,12 +210,25 @@ function buildStatusUpdatePayload(
         committed_at: now,
         done_at: null,
         invoiced_at: null,
+        cancelled_at: null,
+        archived_at: null,
+      };
+    }
+
+    if (currentStatus === "cancelado") {
+      return {
+        status: nextStatus,
+        committed_at: now,
+        cancelled_at: null,
+        archived_at: null,
       };
     }
 
     return {
       status: nextStatus,
       committed_at: now,
+      cancelled_at: null,
+      archived_at: null,
     };
   }
 
@@ -162,6 +237,8 @@ function buildStatusUpdatePayload(
       status: nextStatus,
       done_at: now,
       invoiced_at: null,
+      cancelled_at: null,
+      archived_at: null,
     };
   }
 
@@ -169,12 +246,24 @@ function buildStatusUpdatePayload(
     return {
       status: nextStatus,
       invoiced_at: now,
+      cancelled_at: null,
+      archived_at: null,
     };
   }
 
   if (nextStatus === "cancelado") {
     return {
       status: nextStatus,
+      cancelled_at: now,
+      archived_at: null,
+    };
+  }
+
+  if (nextStatus === "archivado") {
+    return {
+      status: nextStatus,
+      cancelled_at: null,
+      archived_at: now,
     };
   }
 
@@ -183,13 +272,18 @@ function buildStatusUpdatePayload(
   };
 }
 
-async function getTrabajoById(trabajoId: number) {
+async function getTrabajoById(
+  supabase: Awaited<ReturnType<typeof getSupabaseServer>>,
+  trabajoId: number,
+  userId: string
+) {
   const { data, error } = await supabase
     .from("trabajos")
     .select(
-      "id, client_name, phone, address, work_date, start_time, duration_minutes, notes, status, committed_at, done_at, invoiced_at"
+      "id, client_name, phone, address, work_date, start_time, duration_minutes, notes, status, committed_at, done_at, invoiced_at, cancelled_at, archived_at"
     )
     .eq("id", trabajoId)
+    .eq("user_id", userId)
     .maybeSingle();
 
   return {
@@ -200,6 +294,20 @@ async function getTrabajoById(trabajoId: number) {
 
 export async function PUT(request: Request, context: RouteContext) {
   try {
+    const supabase = await getSupabaseServer();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: "Debes iniciar sesión para editar trabajos." },
+        { status: 401 }
+      );
+    }
+
     const { id } = await context.params;
     const trabajoId = Number(id);
 
@@ -234,11 +342,22 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    const todayInMadrid = getTodayInMadrid();
+    const agendaStartDate = getAgendaStartDateInMadrid();
+    const agendaMaxDate = getAgendaMaxDateInMadrid();
 
-    if (work_date < todayInMadrid) {
+    if (work_date < agendaStartDate) {
       return NextResponse.json(
-        { error: "No se pueden mover trabajos a días pasados." },
+        { error: "No se pueden mover trabajos a días ya fuera de agenda." },
+        { status: 400 }
+      );
+    }
+
+    if (work_date > agendaMaxDate) {
+      return NextResponse.json(
+        {
+          error:
+            "Solo puedes programar trabajos hasta 30 días por delante desde hoy.",
+        },
         { status: 400 }
       );
     }
@@ -258,7 +377,9 @@ export async function PUT(request: Request, context: RouteContext) {
     }
 
     const { data: trabajo, error: trabajoError } = await getTrabajoById(
-      trabajoId
+      supabase,
+      trabajoId,
+      user.id
     );
 
     if (trabajoError) {
@@ -286,9 +407,6 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    const WORK_DAY_START = "08:00";
-    const WORK_DAY_END = "20:00";
-
     const dayStartMinutes = timeToMinutes(WORK_DAY_START);
     const dayEndMinutes = timeToMinutes(WORK_DAY_END);
     const newStartMinutes = timeToMinutes(start_time);
@@ -314,6 +432,7 @@ export async function PUT(request: Request, context: RouteContext) {
       const { data: existingTrabajos, error: existingError } = await supabase
         .from("trabajos")
         .select("id, client_name, start_time, duration_minutes, status")
+        .eq("user_id", user.id)
         .eq("work_date", work_date)
         .neq("id", trabajoId)
         .order("start_time", { ascending: true });
@@ -373,6 +492,7 @@ export async function PUT(request: Request, context: RouteContext) {
         notes: notes || null,
       })
       .eq("id", trabajoId)
+      .eq("user_id", user.id)
       .select("*")
       .maybeSingle();
 
@@ -394,6 +514,20 @@ export async function PUT(request: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
+    const supabase = await getSupabaseServer();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: "Debes iniciar sesión para cambiar estados." },
+        { status: 401 }
+      );
+    }
+
     const { id } = await context.params;
     const trabajoId = Number(id);
 
@@ -420,7 +554,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const { data: trabajo, error: trabajoError } = await getTrabajoById(
-      trabajoId
+      supabase,
+      trabajoId,
+      user.id
     );
 
     if (trabajoError) {
@@ -454,7 +590,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       .from("trabajos")
       .update(updatePayload)
       .eq("id", trabajoId)
-      .select("id, status, committed_at, done_at, invoiced_at")
+      .eq("user_id", user.id)
+      .select(
+        "id, status, committed_at, done_at, invoiced_at, cancelled_at, archived_at"
+      )
       .maybeSingle();
 
     if (error) {
@@ -475,6 +614,20 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 export async function DELETE(request: Request, context: RouteContext) {
   try {
+    const supabase = await getSupabaseServer();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: "Debes iniciar sesión para borrar trabajos." },
+        { status: 401 }
+      );
+    }
+
     const { id } = await context.params;
     const trabajoId = Number(id);
 
@@ -508,7 +661,9 @@ export async function DELETE(request: Request, context: RouteContext) {
     }
 
     const { data: trabajo, error: trabajoError } = await getTrabajoById(
-      trabajoId
+      supabase,
+      trabajoId,
+      user.id
     );
 
     if (trabajoError) {
@@ -525,11 +680,11 @@ export async function DELETE(request: Request, context: RouteContext) {
       );
     }
 
-    if (normalizeStatus(trabajo.status) !== "archivado") {
+    if (!canDeletePermanently(trabajo.status)) {
       return NextResponse.json(
         {
           error:
-            "Solo se puede eliminar definitivamente un trabajo cuando ya está Archivado.",
+            "Solo se puede eliminar definitivamente un trabajo cuando está Cancelado o Archivado.",
         },
         { status: 400 }
       );
@@ -538,7 +693,8 @@ export async function DELETE(request: Request, context: RouteContext) {
     const { error } = await supabase
       .from("trabajos")
       .delete()
-      .eq("id", trabajoId);
+      .eq("id", trabajoId)
+      .eq("user_id", user.id);
 
     if (error) {
       return NextResponse.json(

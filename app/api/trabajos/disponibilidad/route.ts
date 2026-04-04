@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseServer } from "@/lib/supabase-server";
 
 type ExistingTrabajo = {
   id: number;
@@ -13,6 +13,7 @@ const MADRID_TIME_ZONE = "Europe/Madrid";
 const WORK_DAY_START = "08:00";
 const WORK_DAY_END = "20:00";
 const SLOT_STEP_MINUTES = 30;
+const MAX_FUTURE_DAYS = 30;
 
 function isValidDate(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -97,6 +98,11 @@ function getAgendaStartDateInMadrid() {
   return dateValue;
 }
 
+function getAgendaMaxDateInMadrid() {
+  const { dateValue } = getMadridNowParts();
+  return addDaysToDateValue(dateValue, MAX_FUTURE_DAYS);
+}
+
 function isBlockingStatus(status: string) {
   const normalized = status.trim().toLowerCase();
   return (
@@ -108,6 +114,20 @@ function isBlockingStatus(status: string) {
 
 export async function GET(request: Request) {
   try {
+    const supabase = await getSupabaseServer();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: "Debes iniciar sesión para consultar disponibilidad." },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
 
     const date = (searchParams.get("date") || "").trim();
@@ -122,6 +142,7 @@ export async function GET(request: Request) {
         : null;
 
     const agendaStartDate = getAgendaStartDateInMadrid();
+    const agendaMaxDate = getAgendaMaxDateInMadrid();
 
     if (!date || !isValidDate(date)) {
       return NextResponse.json(
@@ -140,6 +161,16 @@ export async function GET(request: Request) {
       );
     }
 
+    if (date > agendaMaxDate) {
+      return NextResponse.json(
+        {
+          error:
+            "Solo puedes consultar disponibilidad hasta 30 días por delante desde hoy.",
+        },
+        { status: 400 }
+      );
+    }
+
     if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
       return NextResponse.json(
         { error: "La duración no es válida." },
@@ -150,6 +181,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase
       .from("trabajos")
       .select("id, client_name, start_time, duration_minutes, status")
+      .eq("user_id", user.id)
       .eq("work_date", date)
       .order("start_time", { ascending: true });
 

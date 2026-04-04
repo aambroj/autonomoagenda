@@ -37,7 +37,7 @@ export default function AgendaFilters({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">
-            Buscar y filtrar
+            Buscar y filtrar trabajos
           </h2>
           <p className="mt-1 text-sm text-slate-600">
             Localiza trabajos rápidamente por cliente, estado o día.

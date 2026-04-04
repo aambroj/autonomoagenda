@@ -1,0 +1,159 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getSupabaseBrowser } from "@/lib/supabase-browser";
+
+function getFriendlyErrorMessage(message: string) {
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("user already registered")) {
+    return "Ese email ya está registrado.";
+  }
+
+  if (normalized.includes("password")) {
+    return "La contraseña no cumple los requisitos mínimos.";
+  }
+
+  return message || "No se pudo crear la cuenta.";
+}
+
+export default function RegistroPage() {
+  const router = useRouter();
+  const supabase = useMemo(() => getSupabaseBrowser(), []);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [infoMessage, setInfoMessage] = useState("");
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setErrorMessage("");
+    setInfoMessage("");
+
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+    });
+
+    if (error) {
+      setErrorMessage(getFriendlyErrorMessage(error.message));
+      setSubmitting(false);
+      return;
+    }
+
+    if (data.session) {
+      router.replace("/agenda");
+      router.refresh();
+      return;
+    }
+
+    setInfoMessage(
+      "Cuenta creada. Revisa tu correo si tienes activada la confirmación por email y después inicia sesión."
+    );
+    setSubmitting(false);
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-14">
+      <div className="mx-auto max-w-md">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="mb-6">
+            <Link
+              href="/"
+              className="text-sm font-semibold text-slate-500 transition hover:text-slate-700"
+            >
+              ← Volver a la portada
+            </Link>
+
+            <p className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+              HuecoPro
+            </p>
+
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-900">
+              Crear cuenta
+            </h1>
+
+            <p className="mt-3 text-base text-slate-600">
+              Registra tu acceso y entra después a tu agenda de trabajo.
+            </p>
+          </div>
+
+          {infoMessage ? (
+            <div className="mb-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800">
+              {infoMessage}
+            </div>
+          ) : null}
+
+          {errorMessage ? (
+            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              {errorMessage}
+            </div>
+          ) : null}
+
+          <form onSubmit={handleSubmit} className="grid gap-4">
+            <div>
+              <label
+                htmlFor="email"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-500"
+                placeholder="tuemail@ejemplo.com"
+                required
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="password"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Contraseña
+              </label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-500"
+                placeholder="Mínimo 6 caracteres"
+                minLength={6}
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="mt-2 inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-base font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? "Creando cuenta..." : "Crear cuenta"}
+            </button>
+          </form>
+
+          <p className="mt-5 text-sm text-slate-600">
+            ¿Ya tienes cuenta?{" "}
+            <Link
+              href="/login"
+              className="font-semibold text-slate-900 underline underline-offset-4"
+            >
+              Entra aquí
+            </Link>
+          </p>
+        </div>
+      </div>
+    </main>
+  );
+}

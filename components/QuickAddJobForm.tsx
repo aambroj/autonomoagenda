@@ -13,6 +13,8 @@ type AvailabilityResponse = {
 
 const MADRID_TIME_ZONE = "Europe/Madrid";
 const WORK_DAY_END = "20:00";
+const AGENDA_PATH = "/agenda";
+const MAX_FUTURE_DAYS = 30;
 const DURATION_OPTIONS = [
   30, 45, 60, 90, 120, 150, 180, 210, 240, 270, 300, 360, 420, 480, 540, 600,
 ];
@@ -33,6 +35,17 @@ function addDaysToDateValue(dateValue: string, days: number) {
   const date = dateValueToUtcDate(dateValue);
   date.setUTCDate(date.getUTCDate() + days);
   return toDateValue(date);
+}
+
+function formatShortDate(dateValue: string) {
+  const date = dateValueToUtcDate(dateValue);
+
+  return date.toLocaleDateString("es-ES", {
+    timeZone: MADRID_TIME_ZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 function isSundayDate(dateValue: string) {
@@ -87,6 +100,11 @@ function getAgendaMinDateInMadrid() {
   return dateValue;
 }
 
+function getAgendaMaxDateInMadrid() {
+  const { dateValue } = getMadridNowParts();
+  return addDaysToDateValue(dateValue, MAX_FUTURE_DAYS);
+}
+
 function formatDurationLabel(minutes: number) {
   if (minutes % 60 === 0) {
     return `${minutes / 60} h`;
@@ -112,10 +130,12 @@ export default function QuickAddJobForm() {
   const searchParams = useSearchParams();
 
   const agendaMinDate = useMemo(() => getAgendaMinDateInMadrid(), []);
+  const agendaMaxDate = useMemo(() => getAgendaMaxDateInMadrid(), []);
   const madridNow = useMemo(() => getMadridNowParts(), []);
   const currentMinutesInMadrid = madridNow.hour * 60 + madridNow.minute;
 
   const queryDate = searchParams.get("date") || "";
+  const queryWeek = searchParams.get("week") || "";
   const queryTime = searchParams.get("time") || "";
   const queryDuration = searchParams.get("duration") || "";
   const queryQuick = searchParams.get("quick") || "";
@@ -176,13 +196,55 @@ export default function QuickAddJobForm() {
     currentMinutesInMadrid,
   ]);
 
+  function buildAgendaUrl(params: URLSearchParams, hash?: string) {
+    const query = params.toString();
+    return `${AGENDA_PATH}${query ? `?${query}` : ""}${hash ?? ""}`;
+  }
+
+  function updateWeekInUrl(nextDate: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("week", nextDate);
+    params.set("date", nextDate);
+
+    if (!isQuickModalOpen) {
+      params.delete("quick");
+      params.delete("time");
+      params.delete("duration");
+      params.delete("edit");
+
+      router.replace(buildAgendaUrl(params, "#quick-add-job-form"), {
+        scroll: false,
+      });
+      return;
+    }
+
+    params.set("quick", "1");
+    params.delete("time");
+    params.delete("duration");
+    params.delete("edit");
+
+    router.replace(buildAgendaUrl(params), { scroll: false });
+  }
+
   function closeQuickModal() {
-    router.replace("/");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("quick");
+    params.delete("time");
+    params.delete("duration");
+    params.delete("edit");
+
+    router.replace(buildAgendaUrl(params));
   }
 
   useEffect(() => {
-    if (queryDate && queryDate >= agendaMinDate) {
-      setWorkDate(queryDate);
+    const preferredDate = queryDate || queryWeek;
+
+    if (
+      preferredDate &&
+      preferredDate >= agendaMinDate &&
+      preferredDate <= agendaMaxDate
+    ) {
+      setWorkDate(preferredDate);
     }
 
     if (isValidDuration(queryDuration)) {
@@ -192,13 +254,25 @@ export default function QuickAddJobForm() {
     if (queryTime) {
       setStartTime(queryTime);
     }
-  }, [queryDate, queryTime, queryDuration, agendaMinDate]);
+  }, [
+    queryDate,
+    queryWeek,
+    queryTime,
+    queryDuration,
+    agendaMinDate,
+    agendaMaxDate,
+  ]);
 
   useEffect(() => {
     if (workDate < agendaMinDate) {
       setWorkDate(agendaMinDate);
+      return;
     }
-  }, [workDate, agendaMinDate]);
+
+    if (workDate > agendaMaxDate) {
+      setWorkDate(agendaMaxDate);
+    }
+  }, [workDate, agendaMinDate, agendaMaxDate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -334,11 +408,17 @@ export default function QuickAddJobForm() {
       setNotes("");
       setSuccess("Trabajo guardado correctamente como Comprometido.");
 
-      if (isQuickModalOpen) {
-        router.replace(`/#day-${savedWorkDate}`);
-      } else {
-        router.replace("/#quick-add-job-form");
-      }
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("week", savedWorkDate);
+      params.set("date", savedWorkDate);
+      params.delete("quick");
+      params.delete("time");
+      params.delete("duration");
+      params.delete("edit");
+
+      router.replace(
+        buildAgendaUrl(params, `#day-${savedWorkDate}`)
+      );
 
       router.refresh();
     } catch (error) {
@@ -380,7 +460,7 @@ export default function QuickAddJobForm() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">
-              Añadir trabajo rápido
+              Añadir trabajo a tu agenda
             </h2>
             <p className="mt-1 text-sm text-slate-600">
               Al guardar, el trabajo quedará directamente como Comprometido.
@@ -448,7 +528,13 @@ export default function QuickAddJobForm() {
                 type="date"
                 value={workDate}
                 min={agendaMinDate}
-                onChange={(event) => setWorkDate(event.target.value)}
+                max={agendaMaxDate}
+                onChange={(event) => {
+                  const nextDate = event.target.value;
+                  setWorkDate(nextDate);
+                  setSuccess(null);
+                  updateWeekInUrl(nextDate);
+                }}
                 className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
                 required
               />
@@ -502,6 +588,10 @@ export default function QuickAddJobForm() {
               </select>
             </label>
           </div>
+
+          <p className="-mt-1 text-xs text-slate-500">
+            Puedes programar trabajos hasta el {formatShortDate(agendaMaxDate)}.
+          </p>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
             {isSundaySelected ? (

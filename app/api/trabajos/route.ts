@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseServer } from "@/lib/supabase-server";
 
 type CreateTrabajoBody = {
   client_name?: string;
@@ -22,6 +22,7 @@ type ExistingTrabajo = {
 const MADRID_TIME_ZONE = "Europe/Madrid";
 const WORK_DAY_START = "08:00";
 const WORK_DAY_END = "20:00";
+const MAX_FUTURE_DAYS = 30;
 
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -114,6 +115,11 @@ function getAgendaStartDateInMadrid() {
   return dateValue;
 }
 
+function getAgendaMaxDateInMadrid() {
+  const { dateValue } = getMadridNowParts();
+  return addDaysToDateValue(dateValue, MAX_FUTURE_DAYS);
+}
+
 function isBlockingStatus(status: string) {
   const normalized = status.trim().toLowerCase();
   return (
@@ -125,6 +131,20 @@ function isBlockingStatus(status: string) {
 
 export async function POST(request: Request) {
   try {
+    const supabase = await getSupabaseServer();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: "Debes iniciar sesión para guardar trabajos." },
+        { status: 401 }
+      );
+    }
+
     const body = (await request.json()) as CreateTrabajoBody;
 
     const client_name = normalizeText(body.client_name);
@@ -138,6 +158,7 @@ export async function POST(request: Request) {
     const status = "pendiente";
     const committed_at = new Date().toISOString();
     const agendaStartDate = getAgendaStartDateInMadrid();
+    const agendaMaxDate = getAgendaMaxDateInMadrid();
 
     if (!client_name) {
       return NextResponse.json(
@@ -158,6 +179,16 @@ export async function POST(request: Request) {
         {
           error:
             "Ese día ya ha quedado fuera de agenda. La jornada de hoy ya terminó.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (work_date > agendaMaxDate) {
+      return NextResponse.json(
+        {
+          error:
+            "Solo puedes programar trabajos hasta 30 días por delante desde hoy.",
         },
         { status: 400 }
       );
@@ -204,6 +235,7 @@ export async function POST(request: Request) {
     const { data: existingTrabajos, error: existingError } = await supabase
       .from("trabajos")
       .select("id, client_name, start_time, duration_minutes, status")
+      .eq("user_id", user.id)
       .eq("work_date", work_date)
       .order("start_time", { ascending: true });
 
@@ -252,6 +284,7 @@ export async function POST(request: Request) {
     const { data, error } = await supabase
       .from("trabajos")
       .insert({
+        user_id: user.id,
         client_name,
         phone: phone || null,
         address: address || null,
@@ -263,6 +296,8 @@ export async function POST(request: Request) {
         committed_at,
         done_at: null,
         invoiced_at: null,
+        cancelled_at: null,
+        archived_at: null,
       })
       .select("*")
       .single();

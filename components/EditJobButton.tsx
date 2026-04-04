@@ -22,11 +22,73 @@ type AvailabilityResponse = {
   error?: string;
 };
 
+const AGENDA_PATH = "/agenda";
+const MADRID_TIME_ZONE = "Europe/Madrid";
+const WORK_DAY_END = "20:00";
+
 function toDateValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function dateValueToUtcDate(dateValue: string) {
+  const [year, month, day] = dateValue.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+}
+
+function addDaysToDateValue(dateValue: string, days: number) {
+  const date = dateValueToUtcDate(dateValue);
+  date.setUTCDate(date.getUTCDate() + days);
+  return toDateValue(date);
+}
+
+function getMadridNowParts() {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: MADRID_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+
+  const parts = formatter.formatToParts(new Date());
+
+  const year = parts.find((part) => part.type === "year")?.value ?? "0000";
+  const month = parts.find((part) => part.type === "month")?.value ?? "01";
+  const day = parts.find((part) => part.type === "day")?.value ?? "01";
+  const hour = Number(
+    parts.find((part) => part.type === "hour")?.value ?? "0"
+  );
+  const minute = Number(
+    parts.find((part) => part.type === "minute")?.value ?? "0"
+  );
+
+  return {
+    dateValue: `${year}-${month}-${day}`,
+    hour,
+    minute,
+  };
+}
+
+function timeToMinutes(value: string) {
+  const [hourText, minuteText] = value.slice(0, 5).split(":");
+  return Number(hourText) * 60 + Number(minuteText);
+}
+
+function getAgendaMinDateInMadrid() {
+  const { dateValue, hour, minute } = getMadridNowParts();
+  const currentMinutes = hour * 60 + minute;
+  const workEndMinutes = timeToMinutes(WORK_DAY_END);
+
+  if (currentMinutes >= workEndMinutes) {
+    return addDaysToDateValue(dateValue, 1);
+  }
+
+  return dateValue;
 }
 
 function formatDurationLabel(minutes: number) {
@@ -41,11 +103,6 @@ function formatDurationLabel(minutes: number) {
   }
 
   return `${minutes} min`;
-}
-
-function timeToMinutes(value: string) {
-  const [hourText, minuteText] = value.slice(0, 5).split(":");
-  return Number(hourText) * 60 + Number(minuteText);
 }
 
 function normalizeStatus(value: string) {
@@ -93,7 +150,7 @@ function getStatusBadgeClasses(status: string) {
 export default function EditJobButton(props: EditJobButtonProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const today = useMemo(() => toDateValue(new Date()), []);
+  const agendaMinDate = useMemo(() => getAgendaMinDateInMadrid(), []);
   const originalStartTime = useMemo(
     () => props.startTime.slice(0, 5),
     [props.startTime]
@@ -165,10 +222,21 @@ export default function EditJobButton(props: EditJobButtonProps) {
     params.delete("edit");
 
     const nextQuery = params.toString();
-    const nextUrl = nextQuery ? `/?${nextQuery}` : "/";
+    const nextUrl = nextQuery ? `${AGENDA_PATH}?${nextQuery}` : AGENDA_PATH;
 
     router.replace(nextUrl, { scroll: false });
   }, [router, searchParams]);
+
+  const openModal = useCallback(() => {
+    resetForm();
+    setOpen(true);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("edit", String(props.jobId));
+
+    const nextUrl = `${AGENDA_PATH}?${params.toString()}`;
+    router.replace(nextUrl, { scroll: false });
+  }, [resetForm, searchParams, props.jobId, router]);
 
   useEffect(() => {
     if (shouldOpenFromQuery) {
@@ -191,6 +259,12 @@ export default function EditJobButton(props: EditJobButtonProps) {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [open, closeModal]);
+
+  useEffect(() => {
+    if (workDate < agendaMinDate) {
+      setWorkDate(agendaMinDate);
+    }
+  }, [workDate, agendaMinDate]);
 
   useEffect(() => {
     if (!open) return;
@@ -352,10 +426,7 @@ export default function EditJobButton(props: EditJobButtonProps) {
     <>
       <button
         type="button"
-        onClick={() => {
-          resetForm();
-          setOpen(true);
-        }}
+        onClick={openModal}
         className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 sm:text-sm"
       >
         Editar
@@ -535,7 +606,7 @@ export default function EditJobButton(props: EditJobButtonProps) {
                   <input
                     type="date"
                     value={workDate}
-                    min={today}
+                    min={agendaMinDate}
                     onChange={(event) => setWorkDate(event.target.value)}
                     className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
                     required

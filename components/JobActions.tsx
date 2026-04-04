@@ -57,7 +57,7 @@ export default function JobActions({
 
   async function deleteJob() {
     const confirmation = window.prompt(
-      `Para eliminar definitivamente el trabajo de ${clientName}, escribe "eliminar".`
+      `Vas a eliminar definitivamente el trabajo de ${clientName}. Para confirmar, escribe "eliminar".`
     );
 
     if (confirmation === null) return;
@@ -110,9 +110,9 @@ export default function JobActions({
               type="button"
               onClick={() => updateStatus("cancelado", "cancel")}
               disabled={!!busyAction}
-              className="inline-flex rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+              className="inline-flex rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-bold text-amber-900 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
             >
-              {busyAction === "cancel" ? "Guardando..." : "Cancelar"}
+              {busyAction === "cancel" ? "Guardando..." : "Cancelar trabajo"}
             </button>
           </>
         ) : null}
@@ -123,7 +123,7 @@ export default function JobActions({
               type="button"
               onClick={() => updateStatus("facturado", "invoice")}
               disabled={!!busyAction}
-              className="inline-flex rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-bold text-sky-700 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+              className="inline-flex rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-xs font-bold text-indigo-700 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
             >
               {busyAction === "invoice" ? "Guardando..." : "Marcar facturado"}
             </button>
@@ -147,9 +147,11 @@ export default function JobActions({
               type="button"
               onClick={() => updateStatus("pendiente", "reactivate")}
               disabled={!!busyAction}
-              className="inline-flex rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+              className="inline-flex rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-bold text-amber-900 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
             >
-              {busyAction === "reactivate" ? "Guardando..." : "Reactivar"}
+              {busyAction === "reactivate"
+                ? "Guardando..."
+                : "Reactivar trabajo"}
             </button>
 
             <button
@@ -158,7 +160,9 @@ export default function JobActions({
               disabled={!!busyAction}
               className="inline-flex rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
             >
-              {busyAction === "delete" ? "Borrando..." : "Eliminar"}
+              {busyAction === "delete"
+                ? "Borrando..."
+                : "Eliminar definitivamente"}
             </button>
           </>
         ) : null}
@@ -170,7 +174,7 @@ export default function JobActions({
             disabled={!!busyAction}
             className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
           >
-            {busyAction === "archive" ? "Guardando..." : "Archivar"}
+            {busyAction === "archive" ? "Guardando..." : "Archivar trabajo"}
           </button>
         ) : null}
 
@@ -181,7 +185,9 @@ export default function JobActions({
             disabled={!!busyAction}
             className="inline-flex rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
           >
-            {busyAction === "delete" ? "Borrando..." : "Eliminar"}
+            {busyAction === "delete"
+              ? "Borrando..."
+              : "Eliminar definitivamente"}
           </button>
         ) : null}
       </div>
