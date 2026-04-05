@@ -62,6 +62,75 @@ type AgendaPageProps = {
   }>;
 };
 
+type LinkRow = {
+  id: string;
+  user_a_id: string;
+  user_b_id: string;
+  created_from_invite_id: string | null;
+  is_active: boolean;
+  created_at: string;
+  deactivated_at: string | null;
+};
+
+type InviteRow = {
+  id: string;
+  inviter_user_id: string;
+  invitee_email: string;
+  invitee_user_id: string | null;
+  status: string;
+  created_at: string;
+};
+
+type AgendaOwner = {
+  userId: string;
+  label: string;
+  isOwn: boolean;
+  readOnly: boolean;
+};
+
+type AgendaDayData = {
+  date: string;
+  label: string;
+  compactWeekday: string;
+  compactDayNumber: string;
+  isSunday: boolean;
+  isNonWorkingDay: boolean;
+  items: Trabajo[];
+  blockingItems: Trabajo[];
+  actualFreeBlocks: TimeGap[];
+  usableGaps: TimeGap[];
+  hasActualFreeTime: boolean;
+  hasUsableGaps: boolean;
+  hasShortFreeTime: boolean;
+  totalFreeMinutes: number;
+  firstFreeTime: string | null;
+  longestGap: TimeGap | null;
+  visibleWindowMinutes: number;
+  visibleDayStartMinutes: number;
+  visibleDayEndMinutes: number;
+  busyMinutes: number;
+  occupancyPercentage: number;
+  committedItemsCount: number;
+  doneItemsCount: number;
+  timelineHeightPx: number;
+  timelineMarks: TimelineMark[];
+  timelineGuideMarks: TimelineGuideMark[];
+  displayTimelineMarks: TimelineMark[];
+  displayTimelineGuideMarks: TimelineGuideMark[];
+};
+
+type AgendaComputedData = {
+  filteredTrabajos: Trabajo[];
+  activeTrabajos: Trabajo[];
+  archivedTrabajos: Trabajo[];
+  committedCount: number;
+  doneCount: number;
+  invoicedCount: number;
+  archivedCount: number;
+  daysWithData: AgendaDayData[];
+  hasAnyVisibleWork: boolean;
+};
+
 const DAYS_TO_SHOW = 7;
 const MADRID_LOCALE = "es-ES";
 const MADRID_TIME_ZONE = "Europe/Madrid";
@@ -172,6 +241,17 @@ function formatShortDayMonth(dateValue: string) {
   });
 }
 
+function formatWeekRangeLabel(days: DayItem[]) {
+  if (days.length === 0) return "";
+
+  const firstDate = days[0]?.date;
+  const lastDate = days[days.length - 1]?.date;
+
+  if (!firstDate || !lastDate) return "";
+
+  return `${formatShortDayMonth(firstDate)} - ${formatShortDayMonth(lastDate)}`;
+}
+
 function formatStatusMoment(value: string | null | undefined) {
   if (!value) return "Sin registrar";
 
@@ -240,17 +320,6 @@ function buildNextDays(total: number, startDate: string) {
 
 function buildWeekDays(anchorDate: string) {
   return buildNextDays(DAYS_TO_SHOW, getStartOfWeekDateValue(anchorDate));
-}
-
-function formatWeekRangeLabel(days: DayItem[]) {
-  if (days.length === 0) return "";
-
-  const firstDate = days[0]?.date;
-  const lastDate = days[days.length - 1]?.date;
-
-  if (!firstDate || !lastDate) return "";
-
-  return `${formatShortDayMonth(firstDate)} - ${formatShortDayMonth(lastDate)}`;
 }
 
 function formatTime(value: string) {
@@ -615,6 +684,27 @@ function buildTrabajoHref(jobId: number, weekDate: string) {
   return `/agenda?${params.toString()}#trabajo-${jobId}`;
 }
 
+function buildWeekNavigationHref(params: {
+  q?: string;
+  status?: string;
+  weekDate: string;
+}) {
+  const search = new URLSearchParams();
+
+  if (params.q?.trim()) {
+    search.set("q", params.q.trim());
+  }
+
+  if (params.status?.trim()) {
+    search.set("status", params.status.trim());
+  }
+
+  search.set("week", params.weekDate);
+  search.set("date", params.weekDate);
+
+  return `/agenda?${search.toString()}`;
+}
+
 function getTotalFreeMinutes(gaps: TimeGap[]) {
   return gaps.reduce((total, gap) => total + gap.minutes, 0);
 }
@@ -973,9 +1063,18 @@ function renderSummaryCard({
   );
 }
 
-function renderTrabajoCard(trabajo: Trabajo) {
+function renderTrabajoCard(
+  trabajo: Trabajo,
+  options?: {
+    readOnly?: boolean;
+    ownerLabel?: string;
+  }
+) {
+  const readOnly = options?.readOnly ?? false;
+  const ownerLabel = options?.ownerLabel;
+
   const normalizedStatus = trabajo.status.trim().toLowerCase();
-  const canEdit = normalizedStatus !== "archivado";
+  const canEdit = !readOnly && normalizedStatus !== "archivado";
   const showArchivedDate = normalizedStatus === "archivado";
   const showCancelledNotice = normalizedStatus === "cancelado";
   const showCancelledTracking =
@@ -1006,6 +1105,18 @@ function renderTrabajoCard(trabajo: Trabajo) {
               {showCancelledNotice ? (
                 <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-amber-900">
                   Trabajo cancelado
+                </span>
+              ) : null}
+
+              {readOnly ? (
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-700">
+                  Solo lectura
+                </span>
+              ) : null}
+
+              {ownerLabel && readOnly ? (
+                <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700">
+                  {ownerLabel}
                 </span>
               ) : null}
             </div>
@@ -1059,11 +1170,13 @@ function renderTrabajoCard(trabajo: Trabajo) {
               />
             ) : null}
 
-            <JobActions
-              jobId={trabajo.id}
-              clientName={trabajo.client_name}
-              status={trabajo.status}
-            />
+            {!readOnly ? (
+              <JobActions
+                jobId={trabajo.id}
+                clientName={trabajo.client_name}
+                status={trabajo.status}
+              />
+            ) : null}
           </div>
         </div>
 
@@ -1158,50 +1271,28 @@ function renderTrabajoCard(trabajo: Trabajo) {
   );
 }
 
-export default async function AgendaPage({ searchParams }: AgendaPageProps) {
-  const supabase = await getSupabaseServer();
-
+function buildAgendaComputedData(params: {
+  trabajos: Trabajo[];
+  query: string;
+  status: string;
+  day: string;
+  anchorDate: string;
+  todayInMadrid: string;
+  currentMinutesInMadrid: number;
+  days: DayItem[];
+  hasActiveFilters: boolean;
+}) {
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const resolvedSearchParams = (await searchParams) ?? {};
-  const query = (resolvedSearchParams.q ?? "").trim();
-  const status = (resolvedSearchParams.status ?? "").trim().toLowerCase();
-  const day = (resolvedSearchParams.day ?? "").trim();
-  const requestedDate = (resolvedSearchParams.date ?? "").trim();
-  const requestedWeek = (resolvedSearchParams.week ?? "").trim();
-  const hasActiveFilters = Boolean(query || status || day);
-
-  const madridNow = getMadridNowParts();
-  const todayInMadrid = madridNow.dateValue;
-  const currentMinutesInMadrid = madridNow.hour * 60 + madridNow.minute;
-
-  const agendaStartDateInMadrid = getAgendaStartDateInMadrid();
-
-  const anchorDate = isValidDate(requestedWeek)
-    ? requestedWeek
-    : isValidDate(requestedDate)
-      ? requestedDate
-      : isValidDate(day)
-        ? day
-        : agendaStartDateInMadrid;
-
-  const days = buildWeekDays(anchorDate);
-  const weekRangeLabel = formatWeekRangeLabel(days);
-
-  const { data, error } = await supabase
-    .from("trabajos")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("work_date", { ascending: true })
-    .order("start_time", { ascending: true });
-
-  const trabajos = ((data as Trabajo[]) ?? []).filter(Boolean);
+    trabajos,
+    query,
+    status,
+    day,
+    anchorDate,
+    todayInMadrid,
+    currentMinutesInMadrid,
+    days,
+    hasActiveFilters,
+  } = params;
 
   const filteredTrabajos = trabajos.filter((trabajo) => {
     return (
@@ -1219,11 +1310,6 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
   );
 
   const summaryDate = day || anchorDate;
-  const summaryDateLabel = day
-    ? formatDateLabel(day)
-    : anchorDate === todayInMadrid
-      ? "Hoy"
-      : formatDateLabel(anchorDate);
 
   const committedCount = filteredTrabajos.filter(
     (trabajo) =>
@@ -1390,29 +1476,638 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
   const hasAnyVisibleWork =
     activeTrabajos.length > 0 || archivedTrabajos.length > 0;
 
+  return {
+    filteredTrabajos,
+    activeTrabajos,
+    archivedTrabajos,
+    committedCount,
+    doneCount,
+    invoicedCount,
+    archivedCount,
+    daysWithData,
+    hasAnyVisibleWork,
+  } satisfies AgendaComputedData;
+}
+
+function getSharedAgendaLabel(params: {
+  link: LinkRow;
+  invite: InviteRow | null;
+  currentUserId: string;
+  currentUserEmail: string;
+}) {
+  const { link, invite, currentUserId, currentUserEmail } = params;
+  const otherUserId =
+    link.user_a_id === currentUserId ? link.user_b_id : link.user_a_id;
+
+  if (invite) {
+    const normalizedInviteeEmail = normalizeText(invite.invitee_email);
+    const normalizedCurrentEmail = normalizeText(currentUserEmail);
+
+    if (
+      invite.inviter_user_id === currentUserId &&
+      normalizedInviteeEmail &&
+      normalizedInviteeEmail !== normalizedCurrentEmail
+    ) {
+      return {
+        userId: otherUserId,
+        label: invite.invitee_email,
+      };
+    }
+  }
+
+  return {
+    userId: otherUserId,
+    label: "Agenda compartida",
+  };
+}
+
+function renderSharedAgendaSection(params: {
+  owner: AgendaOwner;
+  data: AgendaComputedData;
+  anchorDate: string;
+  hasActiveFilters: boolean;
+  errorMessage?: string | null;
+}) {
+  const { owner, data, hasActiveFilters, errorMessage } = params;
+
+  return (
+    <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Agenda compartida con {owner.label}
+          </h2>
+          <p className="mt-2 text-sm text-slate-600 sm:text-base">
+            Vista en solo lectura de la agenda del profesional conectado.
+          </p>
+        </div>
+
+        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
+          Solo lectura
+        </span>
+      </div>
+
+      {errorMessage ? (
+        <div className="mt-5 rounded-3xl border border-red-200 bg-red-50 p-5 text-red-700">
+          {errorMessage}
+        </div>
+      ) : !data.hasAnyVisibleWork ? (
+        <div className="mt-5 rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 py-4 text-base font-semibold text-slate-600">
+          No hay trabajos visibles en esta agenda para los filtros actuales.
+        </div>
+      ) : (
+        <>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {renderSummaryCard({
+              title: "Comprometidos",
+              value: data.committedCount,
+              subtitle: "Trabajos comprometidos en la fecha visible.",
+              valueClasses: "text-red-700",
+              cardClasses: "border-red-200 bg-white",
+            })}
+
+            {renderSummaryCard({
+              title: "Hechos",
+              value: data.doneCount,
+              subtitle: "Trabajos hechos en la fecha visible.",
+              valueClasses: "text-sky-700",
+              cardClasses: "border-sky-200 bg-white",
+            })}
+
+            {renderSummaryCard({
+              title: "Facturados",
+              value: data.invoicedCount,
+              subtitle: "Facturados visibles en esta agenda.",
+              valueClasses: "text-indigo-700",
+              cardClasses: "border-indigo-200 bg-white",
+            })}
+
+            {renderSummaryCard({
+              title: "Archivados",
+              value: data.archivedCount,
+              subtitle: "Guardados fuera de producción.",
+              valueClasses: "text-slate-700",
+              cardClasses: "border-slate-300 bg-white",
+            })}
+          </div>
+
+          <div className="mt-6 grid gap-5">
+            {data.daysWithData.map((dayItem) => (
+              <section
+                id={`shared-${owner.userId}-day-${dayItem.date}`}
+                key={`${owner.userId}-${dayItem.date}`}
+                className={`scroll-mt-24 overflow-hidden rounded-3xl border p-5 shadow-sm sm:p-6 ${getDaySectionClasses(
+                  dayItem.isSunday
+                )}`}
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+                        {dayItem.label}
+                      </h3>
+
+                      {dayItem.isNonWorkingDay ? (
+                        <span className={getNonWorkingBadgeClasses()}>
+                          Descanso
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <p className="mt-2 text-base text-slate-500 sm:text-lg">
+                      {dayItem.items.length === 0
+                        ? "Sin trabajos visibles este día."
+                        : `${dayItem.items.length} trabajo${
+                            dayItem.items.length === 1 ? "" : "s"
+                          } visible${dayItem.items.length === 1 ? "" : "s"}`}
+                    </p>
+                  </div>
+
+                  <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-slate-100 px-4 py-2 text-base font-bold text-slate-700 sm:text-lg">
+                    Solo lectura
+                  </span>
+                </div>
+
+                {!dayItem.isNonWorkingDay && dayItem.items.length > 0 ? (
+                  <div
+                    className={`mt-5 rounded-3xl border p-4 ${getInnerPanelClasses(
+                      dayItem.isSunday
+                    )}`}
+                  >
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-base font-bold text-slate-800 sm:text-lg">
+                          Vista vertical del día
+                        </p>
+                        <p className="mt-1 text-sm text-slate-500">
+                          Solo lectura de la agenda compartida.
+                        </p>
+                      </div>
+
+                      <div
+                        className={`text-sm font-bold ${getOccupancyTextClasses(
+                          dayItem.occupancyPercentage
+                        )}`}
+                      >
+                        {dayItem.occupancyPercentage}% ocupado
+                      </div>
+                    </div>
+
+                    <div className="mt-4 h-4 overflow-hidden rounded-full bg-slate-200">
+                      <div
+                        className={`h-full rounded-full transition-all ${getOccupancyBarClasses(
+                          dayItem.occupancyPercentage
+                        )}`}
+                        style={{
+                          width: `${dayItem.occupancyPercentage}%`,
+                        }}
+                      />
+                    </div>
+
+                    <div className="mt-5 grid gap-4 lg:grid-cols-[94px_1fr]">
+                      <div
+                        className="relative hidden lg:block"
+                        style={{
+                          height: `${dayItem.timelineHeightPx}px`,
+                        }}
+                      >
+                        {dayItem.displayTimelineMarks.map((mark) => {
+                          const topPx =
+                            (mark.offsetMinutes / dayItem.visibleWindowMinutes) *
+                            dayItem.timelineHeightPx;
+
+                          return (
+                            <div
+                              key={`shared-mark-${owner.userId}-${dayItem.date}-${mark.label}`}
+                              className="absolute left-0 -translate-y-1/2"
+                              style={{ top: `${topPx}px` }}
+                            >
+                              <span className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600 shadow-sm">
+                                {mark.label}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div
+                        className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-50 shadow-inner"
+                        style={{
+                          height: `${dayItem.timelineHeightPx}px`,
+                        }}
+                      >
+                        <div
+                          className="absolute inset-0"
+                          style={getTimelineCanvasStyle()}
+                        />
+
+                        {dayItem.timelineGuideMarks.map((mark) => {
+                          const topPx =
+                            (mark.offsetMinutes / dayItem.visibleWindowMinutes) *
+                            dayItem.timelineHeightPx;
+
+                          return (
+                            <div
+                              key={`shared-guide-${owner.userId}-${dayItem.date}-${mark.offsetMinutes}`}
+                              className={getTimelineGridLineClasses(mark.major)}
+                              style={{ top: `${topPx}px` }}
+                            />
+                          );
+                        })}
+
+                        {dayItem.displayTimelineGuideMarks.map((mark) => {
+                          const topPx =
+                            (mark.offsetMinutes / dayItem.visibleWindowMinutes) *
+                            dayItem.timelineHeightPx;
+
+                          return (
+                            <div
+                              key={`shared-guide-mobile-${owner.userId}-${dayItem.date}-${mark.offsetMinutes}`}
+                              className="absolute left-3 top-0 lg:hidden"
+                              style={{ top: `${topPx}px` }}
+                            >
+                              <span className="inline-flex -translate-y-1/2 rounded-full border border-slate-200 bg-white/90 px-2 py-0.5 text-[10px] font-bold text-slate-500 shadow-sm">
+                                {mark.label}
+                              </span>
+                            </div>
+                          );
+                        })}
+
+                        {dayItem.blockingItems.map((trabajo) => {
+                          const startMinutes = timeToMinutes(trabajo.start_time);
+                          const endMinutes =
+                            startMinutes + Number(trabajo.duration_minutes || 0);
+
+                          return (
+                            <div
+                              key={`shared-timeline-job-${owner.userId}-${trabajo.id}`}
+                              className={`absolute left-3 right-3 overflow-hidden rounded-2xl border px-4 py-2 shadow-sm ${getTimelineJobClasses(
+                                trabajo.status
+                              )}`}
+                              style={getTimelineBlockStyle({
+                                startMinutes,
+                                endMinutes,
+                                visibleStartMinutes:
+                                  dayItem.visibleDayStartMinutes,
+                                visibleEndMinutes: dayItem.visibleDayEndMinutes,
+                                timelineHeightPx: dayItem.timelineHeightPx,
+                                minHeightPx: 38,
+                              })}
+                              title={`${trabajo.client_name}`}
+                            >
+                              <div className="flex h-full items-center justify-between gap-3 overflow-hidden whitespace-nowrap">
+                                <div className="min-w-0 flex-1 truncate text-[15px] font-bold tabular-nums sm:text-base">
+                                  <span className="font-black">
+                                    {trabajo.client_name}
+                                  </span>
+                                  <span className="mx-2 opacity-50">·</span>
+                                  <span>{formatTime(trabajo.start_time)}</span>
+                                  <span className="mx-1.5 opacity-50">-</span>
+                                  <span>
+                                    {addMinutes(
+                                      trabajo.start_time,
+                                      trabajo.duration_minutes
+                                    )}
+                                  </span>
+                                  <span className="mx-2 opacity-50">·</span>
+                                  <span>
+                                    {formatJobDurationLabel(
+                                      trabajo.duration_minutes
+                                    )}
+                                  </span>
+                                </div>
+
+                                <span
+                                  className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-black ${getTimelineStatusPillClasses(
+                                    trabajo.status
+                                  )}`}
+                                >
+                                  {getStatusLabel(trabajo.status)}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {dayItem.items.length === 0 ? (
+                  !hasActiveFilters ? (
+                    dayItem.isNonWorkingDay ? null : (
+                      <div className="mt-5 rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 py-4 text-base font-semibold text-slate-600">
+                        Sin trabajos visibles este día.
+                      </div>
+                    )
+                  ) : null
+                ) : (
+                  <div className="mt-5 grid gap-3">
+                    {dayItem.items.map((trabajo) =>
+                      renderTrabajoCard(trabajo, {
+                        readOnly: true,
+                        ownerLabel: owner.label,
+                      })
+                    )}
+                  </div>
+                )}
+              </section>
+            ))}
+          </div>
+
+          <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+                  Archivados de {owner.label}
+                </h3>
+                <p className="mt-2 text-base text-slate-500 sm:text-lg">
+                  Vista en solo lectura de los trabajos archivados.
+                </p>
+              </div>
+
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-4 py-2 text-base font-bold text-slate-700 sm:text-lg">
+                {data.archivedTrabajos.length} archivado
+                {data.archivedTrabajos.length === 1 ? "" : "s"}
+              </span>
+            </div>
+
+            {data.archivedTrabajos.length === 0 ? (
+              <div className="mt-5 rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 py-4 text-base font-semibold text-slate-600 sm:text-lg">
+                No hay trabajos archivados visibles.
+              </div>
+            ) : (
+              <div className="mt-5 grid gap-3">
+                {data.archivedTrabajos.map((trabajo) =>
+                  renderTrabajoCard(trabajo, {
+                    readOnly: true,
+                    ownerLabel: owner.label,
+                  })
+                )}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+    </section>
+  );
+}
+
+export default async function AgendaPage({ searchParams }: AgendaPageProps) {
+  const supabase = await getSupabaseServer();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const query = (resolvedSearchParams.q ?? "").trim();
+  const status = (resolvedSearchParams.status ?? "").trim().toLowerCase();
+  const day = (resolvedSearchParams.day ?? "").trim();
+  const requestedDate = (resolvedSearchParams.date ?? "").trim();
+  const requestedWeek = (resolvedSearchParams.week ?? "").trim();
+  const hasActiveFilters = Boolean(query || status || day);
+
+  const madridNow = getMadridNowParts();
+  const todayInMadrid = madridNow.dateValue;
+  const currentMinutesInMadrid = madridNow.hour * 60 + madridNow.minute;
+
+  const agendaStartDateInMadrid = getAgendaStartDateInMadrid();
+
+  const anchorDate = isValidDate(requestedWeek)
+    ? requestedWeek
+    : isValidDate(requestedDate)
+      ? requestedDate
+      : isValidDate(day)
+        ? day
+        : agendaStartDateInMadrid;
+
+  const previousWeekDate = addDaysToDateValue(anchorDate, -7);
+  const nextWeekDate = addDaysToDateValue(anchorDate, 7);
+  const todayWeekDate = todayInMadrid;
+
+  const previousWeekHref = buildWeekNavigationHref({
+    q: query,
+    status,
+    weekDate: previousWeekDate,
+  });
+
+  const todayHref = buildWeekNavigationHref({
+    q: query,
+    status,
+    weekDate: todayWeekDate,
+  });
+
+  const nextWeekHref = buildWeekNavigationHref({
+    q: query,
+    status,
+    weekDate: nextWeekDate,
+  });
+
+  const currentWeekStart = getStartOfWeekDateValue(anchorDate);
+  const todayWeekStart = getStartOfWeekDateValue(todayInMadrid);
+  const isCurrentWeek = currentWeekStart === todayWeekStart;
+
+  const days = buildWeekDays(anchorDate);
+  const weekRangeLabel = formatWeekRangeLabel(days);
+
+  const normalizedUserEmail = (user.email ?? "").trim().toLowerCase();
+
+  const { data: activeLinksData, error: activeLinksError } = await supabase
+    .from("shared_agenda_links")
+    .select("*")
+    .eq("is_active", true)
+    .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`);
+
+  const activeLinks = ((activeLinksData as LinkRow[]) ?? []).filter(Boolean);
+
+  const inviteIds = activeLinks
+    .map((link) => link.created_from_invite_id)
+    .filter((value): value is string => Boolean(value));
+
+  const { data: inviteData, error: inviteError } =
+    inviteIds.length === 0
+      ? { data: [] as InviteRow[], error: null }
+      : await supabase
+          .from("shared_agenda_invites")
+          .select("*")
+          .in("id", inviteIds);
+
+  const inviteMap = new Map(
+    (((inviteData as InviteRow[]) ?? []).filter(Boolean) as InviteRow[]).map(
+      (invite) => [invite.id, invite]
+    )
+  );
+
+  const sharedOwners: AgendaOwner[] = activeLinks.map((link, index) => {
+    const invite = link.created_from_invite_id
+      ? inviteMap.get(link.created_from_invite_id) ?? null
+      : null;
+
+    const sharedInfo = getSharedAgendaLabel({
+      link,
+      invite,
+      currentUserId: user.id,
+      currentUserEmail: normalizedUserEmail,
+    });
+
+    return {
+      userId: sharedInfo.userId,
+      label:
+        sharedInfo.label === "Agenda compartida"
+          ? `${sharedInfo.label} ${index + 1}`
+          : sharedInfo.label,
+      isOwn: false,
+      readOnly: true,
+    };
+  });
+
+  const uniqueOwners = [
+    {
+      userId: user.id,
+      label: "Mi agenda",
+      isOwn: true,
+      readOnly: false,
+    },
+    ...sharedOwners.filter(
+      (owner, index, arr) =>
+        arr.findIndex((item) => item.userId === owner.userId) === index
+    ),
+  ];
+
+  const ownerIds = uniqueOwners.map((owner) => owner.userId);
+
+  const { data: trabajosData, error } = await supabase
+    .from("trabajos")
+    .select("*")
+    .in("user_id", ownerIds)
+    .order("work_date", { ascending: true })
+    .order("start_time", { ascending: true });
+
+  const allTrabajos = ((trabajosData as Trabajo[]) ?? []).filter(Boolean);
+
+  const trabajosByUser = new Map<string, Trabajo[]>();
+
+  for (const owner of uniqueOwners) {
+    trabajosByUser.set(owner.userId, []);
+  }
+
+  for (const trabajo of allTrabajos) {
+    const ownerId = trabajo.user_id ?? "";
+    if (!trabajosByUser.has(ownerId)) {
+      trabajosByUser.set(ownerId, []);
+    }
+    trabajosByUser.get(ownerId)?.push(trabajo);
+  }
+
+  const ownAgendaData = buildAgendaComputedData({
+    trabajos: trabajosByUser.get(user.id) ?? [],
+    query,
+    status,
+    day,
+    anchorDate,
+    todayInMadrid,
+    currentMinutesInMadrid,
+    days,
+    hasActiveFilters,
+  });
+
+  const sharedAgendaData = uniqueOwners
+    .filter((owner) => !owner.isOwn)
+    .map((owner) => ({
+      owner,
+      data: buildAgendaComputedData({
+        trabajos: trabajosByUser.get(owner.userId) ?? [],
+        query,
+        status,
+        day,
+        anchorDate,
+        todayInMadrid,
+        currentMinutesInMadrid,
+        days,
+        hasActiveFilters,
+      }),
+    }));
+
+  const summaryDateLabel = day
+    ? formatDateLabel(day)
+    : anchorDate === todayInMadrid
+      ? "Hoy"
+      : formatDateLabel(anchorDate);
+
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <InternalTopbar />
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-            HuecoPro
-          </p>
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                HuecoPro
+              </p>
 
-          <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-            Tu agenda de trabajo
-          </h1>
+              <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+                Tu agenda de trabajo
+              </h1>
 
-          <p className="mt-4 max-w-3xl text-base text-slate-600 sm:text-lg">
-            Consulta de un vistazo tu semana de trabajo y revisa qué huecos libres
-            te quedan para encajar trabajos.
-          </p>
+              <p className="mt-4 max-w-3xl text-base text-slate-600 sm:text-lg">
+                Consulta de un vistazo tu semana de trabajo y revisa qué huecos
+                libres te quedan para encajar trabajos.
+              </p>
 
-          <p className="mt-3 text-sm text-slate-500">
-            Semana visible: {weekRangeLabel}. Jornada provisional calculada de{" "}
-            {WORK_DAY_START} a {WORK_DAY_END}.
-          </p>
+              <p className="mt-3 text-sm text-slate-500">
+                Semana visible: {weekRangeLabel}. Jornada provisional calculada
+                de {WORK_DAY_START} a {WORK_DAY_END}.
+              </p>
+
+              {sharedOwners.length > 0 ? (
+                <p className="mt-3 text-sm font-medium text-sky-700">
+                  También tienes {sharedOwners.length} agenda
+                  {sharedOwners.length === 1 ? "" : "s"} compartida
+                  {sharedOwners.length === 1 ? "" : "s"} en solo lectura más
+                  abajo.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex flex-col gap-2 sm:items-end">
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
+                {weekRangeLabel}
+              </span>
+
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={previousWeekHref}
+                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Semana anterior
+                </Link>
+
+                <Link
+                  href={todayHref}
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                    isCurrentWeek
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  Hoy
+                </Link>
+
+                <Link
+                  href={nextWeekHref}
+                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Semana siguiente
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="mt-6">
@@ -1431,39 +2126,56 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
           />
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {renderSummaryCard({
-            title: `${summaryDateLabel} · Comprometidos`,
-            value: committedCount,
-            subtitle: "Trabajos ya encajados en agenda.",
-            valueClasses: "text-red-700",
-            cardClasses: "border-red-200 bg-white",
-          })}
+        <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+                Mi agenda
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Tu zona de trabajo completa, con edición y acciones.
+              </p>
+            </div>
 
-          {renderSummaryCard({
-            title: `${summaryDateLabel} · Hechos`,
-            value: doneCount,
-            subtitle: "Trabajos realizados pendientes de cerrar.",
-            valueClasses: "text-sky-700",
-            cardClasses: "border-sky-200 bg-white",
-          })}
+            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+              Editable
+            </span>
+          </div>
 
-          {renderSummaryCard({
-            title: "Facturados",
-            value: invoicedCount,
-            subtitle: "Pendientes de archivar.",
-            valueClasses: "text-indigo-700",
-            cardClasses: "border-indigo-200 bg-white",
-          })}
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {renderSummaryCard({
+              title: `${summaryDateLabel} · Comprometidos`,
+              value: ownAgendaData.committedCount,
+              subtitle: "Trabajos ya encajados en agenda.",
+              valueClasses: "text-red-700",
+              cardClasses: "border-red-200 bg-white",
+            })}
 
-          {renderSummaryCard({
-            title: "Archivados",
-            value: archivedCount,
-            subtitle: "Guardados fuera de producción.",
-            valueClasses: "text-slate-700",
-            cardClasses: "border-slate-300 bg-white",
-          })}
-        </div>
+            {renderSummaryCard({
+              title: `${summaryDateLabel} · Hechos`,
+              value: ownAgendaData.doneCount,
+              subtitle: "Trabajos realizados pendientes de cerrar.",
+              valueClasses: "text-sky-700",
+              cardClasses: "border-sky-200 bg-white",
+            })}
+
+            {renderSummaryCard({
+              title: "Facturados",
+              value: ownAgendaData.invoicedCount,
+              subtitle: "Pendientes de archivar.",
+              valueClasses: "text-indigo-700",
+              cardClasses: "border-indigo-200 bg-white",
+            })}
+
+            {renderSummaryCard({
+              title: "Archivados",
+              value: ownAgendaData.archivedCount,
+              subtitle: "Guardados fuera de producción.",
+              valueClasses: "text-slate-700",
+              cardClasses: "border-slate-300 bg-white",
+            })}
+          </div>
+        </section>
 
         {!hasActiveFilters && !error ? (
           <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -1484,7 +2196,7 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
-              {daysWithData.map((dayItem) => (
+              {ownAgendaData.daysWithData.map((dayItem) => (
                 <a
                   key={`compact-${dayItem.date}`}
                   href={`#day-${dayItem.date}`}
@@ -1613,14 +2325,14 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
             <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-base text-red-700 shadow-sm">
               Error al cargar trabajos: {error.message}
             </div>
-          ) : !hasAnyVisibleWork ? (
+          ) : !ownAgendaData.hasAnyVisibleWork ? (
             <div className="rounded-3xl border border-slate-200 bg-white p-6 text-base text-slate-600 shadow-sm">
               No hay trabajos que coincidan con los filtros actuales.
             </div>
           ) : (
             <>
               <div className="grid gap-5">
-                {daysWithData.map((dayItem) => (
+                {ownAgendaData.daysWithData.map((dayItem) => (
                   <section
                     id={`day-${dayItem.date}`}
                     key={dayItem.date}
@@ -2004,7 +2716,7 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
                                         key={`timeline-job-${trabajo.id}`}
                                         href={buildTrabajoHref(
                                           trabajo.id,
-                                          trabajo.work_date
+                                          anchorDate
                                         )}
                                         className={`absolute left-3 right-3 overflow-hidden rounded-2xl border px-4 py-2 shadow-sm transition hover:shadow-md ${getTimelineJobClasses(
                                           trabajo.status
@@ -2307,18 +3019,18 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
                   </div>
 
                   <span className="inline-flex items-center rounded-full bg-slate-100 px-4 py-2 text-base font-bold text-slate-700 sm:text-lg">
-                    {archivedTrabajos.length} archivado
-                    {archivedTrabajos.length === 1 ? "" : "s"}
+                    {ownAgendaData.archivedTrabajos.length} archivado
+                    {ownAgendaData.archivedTrabajos.length === 1 ? "" : "s"}
                   </span>
                 </div>
 
-                {archivedTrabajos.length === 0 ? (
+                {ownAgendaData.archivedTrabajos.length === 0 ? (
                   <div className="mt-5 rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 py-4 text-base font-semibold text-slate-600 sm:text-lg">
                     No hay trabajos archivados.
                   </div>
                 ) : (
                   <div className="mt-5 grid gap-3">
-                    {archivedTrabajos.map((trabajo) =>
+                    {ownAgendaData.archivedTrabajos.map((trabajo) =>
                       renderTrabajoCard(trabajo)
                     )}
                   </div>
@@ -2327,6 +3039,25 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
             </>
           )}
         </div>
+
+        {sharedOwners.length > 0 ? (
+          <>
+            {activeLinksError || inviteError ? (
+              <div className="mt-8 rounded-3xl border border-red-200 bg-red-50 p-5 text-red-700 shadow-sm">
+                No se pudo cargar toda la información de las agendas compartidas.
+              </div>
+            ) : null}
+
+            {sharedAgendaData.map(({ owner, data }) =>
+              renderSharedAgendaSection({
+                owner,
+                data,
+                anchorDate,
+                hasActiveFilters,
+              })
+            )}
+          </>
+        ) : null}
       </div>
     </main>
   );
