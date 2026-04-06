@@ -14,9 +14,12 @@ type UpdateInviteBody = {
 type InviteRow = {
   id: string;
   inviter_user_id: string;
+  inviter_email: string | null;
   invitee_email: string;
   invitee_user_id: string | null;
   status: string;
+  alias_for_inviter: string | null;
+  alias_for_invitee: string | null;
 };
 
 type LinkRow = {
@@ -92,7 +95,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const isInviter = inviteRow.inviter_user_id === user.id;
-    const isInvitee = normalizeEmail(inviteRow.invitee_email) === currentUserEmail;
+    const isInvitee =
+      normalizeEmail(inviteRow.invitee_email) === currentUserEmail;
     const now = new Date().toISOString();
 
     if (action === "cancel") {

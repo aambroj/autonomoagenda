@@ -1535,7 +1535,7 @@ function renderSharedAgendaSection(params: {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Agenda compartida con {owner.label}
+            Esta es la agenda que te comparte {owner.label}
           </h2>
           <p className="mt-2 text-sm text-slate-600 sm:text-base">
             Vista en solo lectura de la agenda del profesional conectado.
@@ -3048,14 +3048,16 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
               </div>
             ) : null}
 
-            {sharedAgendaData.map(({ owner, data }) =>
-              renderSharedAgendaSection({
-                owner,
-                data,
-                anchorDate,
-                hasActiveFilters,
-              })
-            )}
+            {sharedAgendaData.map(({ owner, data }) => (
+              <div key={owner.userId}>
+                {renderSharedAgendaSection({
+                  owner,
+                  data,
+                  anchorDate,
+                  hasActiveFilters,
+                })}
+              </div>
+            ))}
           </>
         ) : null}
       </div>

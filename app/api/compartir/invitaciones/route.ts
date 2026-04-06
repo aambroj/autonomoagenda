@@ -66,8 +66,7 @@ export async function POST(request: Request) {
     if (existingPendingInvite) {
       return NextResponse.json(
         {
-          error:
-            "Ya tienes una invitación pendiente para ese correo.",
+          error: "Ya tienes una invitación pendiente para ese correo.",
         },
         { status: 409 }
       );
@@ -77,8 +76,11 @@ export async function POST(request: Request) {
       .from("shared_agenda_invites")
       .insert({
         inviter_user_id: user.id,
+        inviter_email: currentUserEmail,
         invitee_email: inviteeEmail,
         status: "pending",
+        alias_for_inviter: null,
+        alias_for_invitee: null,
       })
       .select("*")
       .maybeSingle();
