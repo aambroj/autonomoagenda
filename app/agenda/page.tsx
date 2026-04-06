@@ -6,6 +6,7 @@ import QuickAddJobForm from "@/components/QuickAddJobForm";
 import JobActions from "@/components/JobActions";
 import EditJobButton from "@/components/EditJobButton";
 import AgendaFilters from "@/components/AgendaFilters";
+import SharedAgendaSelector from "@/components/SharedAgendaSelector";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,7 @@ type AgendaPageProps = {
     duration?: string;
     quick?: string;
     edit?: string;
+    shared?: string;
   }>;
 };
 
@@ -688,6 +690,7 @@ function buildWeekNavigationHref(params: {
   q?: string;
   status?: string;
   weekDate: string;
+  shared?: string;
 }) {
   const search = new URLSearchParams();
 
@@ -697,6 +700,10 @@ function buildWeekNavigationHref(params: {
 
   if (params.status?.trim()) {
     search.set("status", params.status.trim());
+  }
+
+  if (params.shared?.trim()) {
+    search.set("shared", params.shared.trim());
   }
 
   search.set("week", params.weekDate);
@@ -1071,7 +1078,6 @@ function renderTrabajoCard(
   }
 ) {
   const readOnly = options?.readOnly ?? false;
-  const ownerLabel = options?.ownerLabel;
 
   const normalizedStatus = trabajo.status.trim().toLowerCase();
   const canEdit = !readOnly && normalizedStatus !== "archivado";
@@ -1111,12 +1117,6 @@ function renderTrabajoCard(
               {readOnly ? (
                 <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-700">
                   Solo lectura
-                </span>
-              ) : null}
-
-              {ownerLabel && readOnly ? (
-                <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700">
-                  {ownerLabel}
                 </span>
               ) : null}
             </div>
@@ -1534,8 +1534,11 @@ function renderSharedAgendaSection(params: {
     <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Esta es la agenda que te comparte {owner.label}
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Agenda compartida
+          </p>
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Agenda compartida con {owner.label}
           </h2>
           <p className="mt-2 text-sm text-slate-600 sm:text-base">
             Vista en solo lectura de la agenda del profesional conectado.
@@ -1806,7 +1809,6 @@ function renderSharedAgendaSection(params: {
                     {dayItem.items.map((trabajo) =>
                       renderTrabajoCard(trabajo, {
                         readOnly: true,
-                        ownerLabel: owner.label,
                       })
                     )}
                   </div>
@@ -1841,7 +1843,6 @@ function renderSharedAgendaSection(params: {
                 {data.archivedTrabajos.map((trabajo) =>
                   renderTrabajoCard(trabajo, {
                     readOnly: true,
-                    ownerLabel: owner.label,
                   })
                 )}
               </div>
@@ -1870,6 +1871,7 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
   const day = (resolvedSearchParams.day ?? "").trim();
   const requestedDate = (resolvedSearchParams.date ?? "").trim();
   const requestedWeek = (resolvedSearchParams.week ?? "").trim();
+  const requestedShared = (resolvedSearchParams.shared ?? "").trim();
   const hasActiveFilters = Boolean(query || status || day);
 
   const madridNow = getMadridNowParts();
@@ -1885,35 +1887,6 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
       : isValidDate(day)
         ? day
         : agendaStartDateInMadrid;
-
-  const previousWeekDate = addDaysToDateValue(anchorDate, -7);
-  const nextWeekDate = addDaysToDateValue(anchorDate, 7);
-  const todayWeekDate = todayInMadrid;
-
-  const previousWeekHref = buildWeekNavigationHref({
-    q: query,
-    status,
-    weekDate: previousWeekDate,
-  });
-
-  const todayHref = buildWeekNavigationHref({
-    q: query,
-    status,
-    weekDate: todayWeekDate,
-  });
-
-  const nextWeekHref = buildWeekNavigationHref({
-    q: query,
-    status,
-    weekDate: nextWeekDate,
-  });
-
-  const currentWeekStart = getStartOfWeekDateValue(anchorDate);
-  const todayWeekStart = getStartOfWeekDateValue(todayInMadrid);
-  const isCurrentWeek = currentWeekStart === todayWeekStart;
-
-  const days = buildWeekDays(anchorDate);
-  const weekRangeLabel = formatWeekRangeLabel(days);
 
   const normalizedUserEmail = (user.email ?? "").trim().toLowerCase();
 
@@ -1979,6 +1952,9 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
     ),
   ];
 
+  const selectedSharedUserId =
+    requestedShared || sharedOwners[0]?.userId || "";
+
   const ownerIds = uniqueOwners.map((owner) => owner.userId);
 
   const { data: trabajosData, error } = await supabase
@@ -2003,6 +1979,38 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
     }
     trabajosByUser.get(ownerId)?.push(trabajo);
   }
+
+  const previousWeekDate = addDaysToDateValue(anchorDate, -7);
+  const nextWeekDate = addDaysToDateValue(anchorDate, 7);
+  const todayWeekDate = todayInMadrid;
+
+  const previousWeekHref = buildWeekNavigationHref({
+    q: query,
+    status,
+    weekDate: previousWeekDate,
+    shared: selectedSharedUserId,
+  });
+
+  const todayHref = buildWeekNavigationHref({
+    q: query,
+    status,
+    weekDate: todayWeekDate,
+    shared: selectedSharedUserId,
+  });
+
+  const nextWeekHref = buildWeekNavigationHref({
+    q: query,
+    status,
+    weekDate: nextWeekDate,
+    shared: selectedSharedUserId,
+  });
+
+  const currentWeekStart = getStartOfWeekDateValue(anchorDate);
+  const todayWeekStart = getStartOfWeekDateValue(todayInMadrid);
+  const isCurrentWeek = currentWeekStart === todayWeekStart;
+
+  const days = buildWeekDays(anchorDate);
+  const weekRangeLabel = formatWeekRangeLabel(days);
 
   const ownAgendaData = buildAgendaComputedData({
     trabajos: trabajosByUser.get(user.id) ?? [],
@@ -2032,6 +2040,11 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
         hasActiveFilters,
       }),
     }));
+
+  const selectedSharedAgenda =
+    sharedAgendaData.find(
+      (item) => item.owner.userId === selectedSharedUserId
+    ) ?? sharedAgendaData[0] ?? null;
 
   const summaryDateLabel = day
     ? formatDateLabel(day)
@@ -3048,16 +3061,41 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
               </div>
             ) : null}
 
-            {sharedAgendaData.map(({ owner, data }) => (
-              <div key={owner.userId}>
+            <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    Compartida
+                  </p>
+                  <h2 className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
+                    Elige qué agenda compartida quieres ver
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-600 sm:text-base">
+                    Solo se muestra una agenda compartida cada vez para que la
+                    pantalla quede más limpia.
+                  </p>
+                </div>
+
+                <SharedAgendaSelector
+                  options={sharedAgendaData.map(({ owner }) => ({
+                    userId: owner.userId,
+                    label: owner.label,
+                  }))}
+                  selectedUserId={selectedSharedAgenda?.owner.userId ?? ""}
+                />
+              </div>
+            </section>
+
+            {selectedSharedAgenda ? (
+              <div key={selectedSharedAgenda.owner.userId}>
                 {renderSharedAgendaSection({
-                  owner,
-                  data,
+                  owner: selectedSharedAgenda.owner,
+                  data: selectedSharedAgenda.data,
                   anchorDate,
                   hasActiveFilters,
                 })}
               </div>
-            ))}
+            ) : null}
           </>
         ) : null}
       </div>

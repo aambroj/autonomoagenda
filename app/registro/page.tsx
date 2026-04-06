@@ -22,6 +22,7 @@ function getFriendlyErrorMessage(message: string) {
 export default function RegistroPage() {
   const router = useRouter();
   const supabase = useMemo(() => getSupabaseBrowser(), []);
+  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -34,8 +35,11 @@ export default function RegistroPage() {
     setErrorMessage("");
     setInfoMessage("");
 
+    const cleanDisplayName = displayName.trim();
+    const cleanEmail = email.trim();
+
     const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
+      email: cleanEmail,
       password,
     });
 
@@ -43,6 +47,23 @@ export default function RegistroPage() {
       setErrorMessage(getFriendlyErrorMessage(error.message));
       setSubmitting(false);
       return;
+    }
+
+    const createdUserId = data.user?.id;
+
+    if (createdUserId && cleanDisplayName) {
+      const { error: profileError } = await supabase.from("profiles").upsert({
+        id: createdUserId,
+        display_name: cleanDisplayName,
+      });
+
+      if (profileError) {
+        setErrorMessage(
+          profileError.message || "La cuenta se creó, pero no se pudo guardar el nombre."
+        );
+        setSubmitting(false);
+        return;
+      }
     }
 
     if (data.session) {
@@ -95,6 +116,25 @@ export default function RegistroPage() {
           ) : null}
 
           <form onSubmit={handleSubmit} className="grid gap-4">
+            <div>
+              <label
+                htmlFor="displayName"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Nombre
+              </label>
+              <input
+                id="displayName"
+                type="text"
+                autoComplete="name"
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-500"
+                placeholder="Tu nombre"
+                required
+              />
+            </div>
+
             <div>
               <label
                 htmlFor="email"
