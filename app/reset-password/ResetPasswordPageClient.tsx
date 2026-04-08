@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
+import PasswordField from "@/components/PasswordField";
 
 function getFriendlyErrorMessage(message: string) {
   const normalized = message.toLowerCase().trim();
@@ -196,53 +197,33 @@ export default function ResetPasswordPageClient() {
           ) : null}
 
           <form onSubmit={handleSubmit} className="grid gap-4">
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Nueva contraseña
-              </label>
+            <PasswordField
+              id="password"
+              label="Nueva contraseña"
+              value={password}
+              onChange={(value) => {
+                setPassword(value);
+                setErrorMessage("");
+              }}
+              placeholder="Mínimo 6 caracteres"
+              autoComplete="new-password"
+              required
+              disabled={!linkReady || checkingLink || submitting}
+            />
 
-              <input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(event) => {
-                  setPassword(event.target.value);
-                  setErrorMessage("");
-                }}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-500"
-                placeholder="Mínimo 6 caracteres"
-                required
-                disabled={!linkReady || checkingLink || submitting}
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Repetir contraseña
-              </label>
-
-              <input
-                id="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(event) => {
-                  setConfirmPassword(event.target.value);
-                  setErrorMessage("");
-                }}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-500"
-                placeholder="Repite la nueva contraseña"
-                required
-                disabled={!linkReady || checkingLink || submitting}
-              />
-            </div>
+            <PasswordField
+              id="confirmPassword"
+              label="Repetir contraseña"
+              value={confirmPassword}
+              onChange={(value) => {
+                setConfirmPassword(value);
+                setErrorMessage("");
+              }}
+              placeholder="Repite la nueva contraseña"
+              autoComplete="new-password"
+              required
+              disabled={!linkReady || checkingLink || submitting}
+            />
 
             <button
               type="submit"

@@ -59,11 +59,34 @@ const audience = [
   "Autónomos y socios",
 ];
 
+const faqItems = [
+  {
+    question: "¿Mi usuario es un email o un nombre?",
+    answer:
+      "Tu usuario de acceso es siempre el email con el que te registraste.",
+  },
+  {
+    question: "¿Puedo compartir mi agenda con otro profesional?",
+    answer:
+      "Sí. La agenda compartida está pensada para ver la agenda del otro en solo lectura, sin editarla.",
+  },
+  {
+    question: "¿Cada profesional necesita su propia cuenta?",
+    answer:
+      "Sí. Cada uno trabaja con su propia cuenta y su propia agenda.",
+  },
+  {
+    question: "¿Qué pasa si olvido la contraseña?",
+    answer:
+      "Puedes recuperarla desde la pantalla de acceso y crear una nueva en pocos pasos.",
+  },
+];
+
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
           <Link href="/" className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-sm font-black text-white shadow-sm">
               AA
@@ -79,7 +102,7 @@ export default function HomePage() {
             </div>
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
             <Link
               href="/login"
               className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
@@ -109,9 +132,9 @@ export default function HomePage() {
             </h1>
 
             <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600 sm:text-xl">
-              AutonomoAgenda está pensado para autónomos que necesitan ver rápido sus
-              próximos huecos, apuntar trabajos sin perder tiempo y mantener su
-              jornada ordenada de forma simple.
+              AutonomoAgenda está pensado para autónomos que necesitan ver rápido
+              sus próximos huecos, apuntar trabajos sin perder tiempo y mantener
+              su jornada ordenada de forma simple.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
@@ -239,8 +262,8 @@ export default function HomePage() {
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
               La portada sirve para explicar y captar. La cuenta sirve para
-              trabajar. Así AutonomoAgenda sigue siendo sencillo, rápido y fácil de
-              entender.
+              trabajar. Así AutonomoAgenda sigue siendo sencillo, rápido y fácil
+              de entender.
             </p>
           </div>
 
@@ -307,10 +330,10 @@ export default function HomePage() {
             </h2>
 
             <p className="mt-4 text-base leading-7 text-slate-300 sm:text-lg">
-              AutonomoAgenda está pensado para que cada profesional tenga su propia
-              agenda y, si ambos tienen cuenta activa, puedan verse en modo solo
-              lectura. Sin editar la agenda ajena. Sin perder control. Y con
-              opción de dejar de compartir cuando quieran.
+              AutonomoAgenda está pensado para que cada profesional tenga su
+              propia agenda y, si ambos tienen cuenta activa, puedan verse en
+              modo solo lectura. Sin editar la agenda ajena. Sin perder control.
+              Y con opción de dejar de compartir cuando quieran.
             </p>
           </div>
 
@@ -342,6 +365,101 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="px-4 py-4 sm:px-6 sm:py-6">
+        <div className="mx-auto max-w-6xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="max-w-3xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+              Dudas habituales
+            </p>
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+              FAQ rápida
+            </h2>
+            <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
+              Respuestas cortas a las preguntas más normales antes de empezar.
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            {faqItems.map((item) => (
+              <article
+                key={item.question}
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
+              >
+                <h3 className="text-lg font-bold text-slate-900">
+                  {item.question}
+                </h3>
+                <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+                  {item.answer}
+                </p>
+              </article>
+            ))}
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-slate-600">
+              Si quieres ver más información, puedes ir a la página completa de
+              preguntas frecuentes.
+            </p>
+
+            <Link
+              href="/faq"
+              className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+            >
+              Ver FAQ completa
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-4 py-4 sm:px-6 sm:py-6">
+        <div className="mx-auto max-w-6xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="max-w-3xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+              Información y soporte
+            </p>
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+              ¿Necesitas escribirnos?
+            </h2>
+            <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
+              Puedes usar cualquiera de estos dos correos para información
+              general o soporte del software.
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            <a
+              href="mailto:alber.ambroj@gmail.com"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:border-slate-300 hover:bg-white"
+            >
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Correo 1
+              </p>
+              <p className="mt-3 break-all text-lg font-bold text-slate-900">
+                alber.ambroj@gmail.com
+              </p>
+              <p className="mt-2 text-sm text-slate-600">
+                Información y soporte de AutonomoAgenda.
+              </p>
+            </a>
+
+            <a
+              href="mailto:aambroj@yahoo.es"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:border-slate-300 hover:bg-white"
+            >
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Correo 2
+              </p>
+              <p className="mt-3 break-all text-lg font-bold text-slate-900">
+                aambroj@yahoo.es
+              </p>
+              <p className="mt-2 text-sm text-slate-600">
+                Información y soporte de AutonomoAgenda.
+              </p>
+            </a>
+          </div>
+        </div>
+      </section>
+
       <section className="px-4 py-10 sm:px-6 sm:py-14">
         <div className="mx-auto max-w-4xl rounded-[2rem] border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-10">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -353,8 +471,9 @@ export default function HomePage() {
           </h2>
 
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-            Regístrate, entra a tu agenda de trabajo, está pensada para
-            ver huecos, encajar trabajos y seguir el estado sin complicaciones.
+            Regístrate, entra a tu agenda de trabajo y trabaja con una
+            herramienta pensada para ver huecos, encajar trabajos y seguir el
+            estado sin complicaciones.
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

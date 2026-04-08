@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
+import PasswordField from "@/components/PasswordField";
 
 function getSafeRedirect(value: string | null) {
   if (!value) return "/agenda";
@@ -176,12 +177,9 @@ export default function LoginPageClient() {
 
             <div>
               <div className="mb-2 flex items-center justify-between gap-3">
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-semibold text-slate-700"
-                >
+                <span className="block text-sm font-semibold text-slate-700">
                   Contraseña
-                </label>
+                </span>
 
                 <Link
                   href="/recuperar-contrasena"
@@ -191,17 +189,16 @@ export default function LoginPageClient() {
                 </Link>
               </div>
 
-              <input
+              <PasswordField
                 id="password"
-                type="password"
-                autoComplete="current-password"
+                label="Contraseña"
                 value={password}
-                onChange={(event) => {
-                  setPassword(event.target.value);
+                onChange={(value) => {
+                  setPassword(value);
                   setErrorMessage("");
                 }}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-500"
                 placeholder="Tu contraseña"
+                autoComplete="current-password"
                 required
               />
             </div>

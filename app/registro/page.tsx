@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
+import PasswordField from "@/components/PasswordField";
 
 function getFriendlyErrorMessage(message: string) {
   const normalized = message.toLowerCase();
@@ -59,7 +60,8 @@ export default function RegistroPage() {
 
       if (profileError) {
         setErrorMessage(
-          profileError.message || "La cuenta se creó, pero no se pudo guardar el nombre."
+          profileError.message ||
+            "La cuenta se creó, pero no se pudo guardar el nombre."
         );
         setSubmitting(false);
         return;
@@ -79,9 +81,9 @@ export default function RegistroPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-14">
+    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-14">
       <div className="mx-auto max-w-md">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
           <div className="mb-6">
             <Link
               href="/"
@@ -128,7 +130,10 @@ export default function RegistroPage() {
                 type="text"
                 autoComplete="name"
                 value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
+                onChange={(event) => {
+                  setDisplayName(event.target.value);
+                  setErrorMessage("");
+                }}
                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-500"
                 placeholder="Tu nombre"
                 required
@@ -140,48 +145,54 @@ export default function RegistroPage() {
                 htmlFor="email"
                 className="mb-2 block text-sm font-semibold text-slate-700"
               >
-                Email
+                Email de acceso
               </label>
               <input
                 id="email"
                 type="email"
                 autoComplete="email"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setErrorMessage("");
+                }}
                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-500"
                 placeholder="tuemail@ejemplo.com"
                 required
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Contraseña
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-500"
-                placeholder="Mínimo 6 caracteres"
-                minLength={6}
-                required
-              />
-            </div>
+            <PasswordField
+              id="password"
+              label="Contraseña"
+              value={password}
+              onChange={(value) => {
+                setPassword(value);
+                setErrorMessage("");
+              }}
+              placeholder="Mínimo 6 caracteres"
+              autoComplete="new-password"
+              required
+              minLength={6}
+            />
 
             <button
               type="submit"
               disabled={submitting}
-              className="mt-2 inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-base font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-2 inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-base font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? "Creando cuenta..." : "Crear cuenta"}
             </button>
           </form>
+
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            Tu usuario será siempre el{" "}
+            <span className="font-semibold text-slate-900">
+              email con el que te registras
+            </span>
+            . Guárdalo bien para acceder y recuperar la contraseña cuando lo
+            necesites.
+          </div>
 
           <p className="mt-5 text-sm text-slate-600">
             ¿Ya tienes cuenta?{" "}
