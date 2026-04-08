@@ -2122,7 +2122,7 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                AuntonomoAgenda
+                AutonomoAgenda
               </p>
 
               <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">

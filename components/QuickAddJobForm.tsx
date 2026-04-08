@@ -48,6 +48,19 @@ function formatShortDate(dateValue: string) {
   });
 }
 
+function formatLongDate(dateValue: string) {
+  const date = dateValueToUtcDate(dateValue);
+
+  const label = date.toLocaleDateString("es-ES", {
+    timeZone: MADRID_TIME_ZONE,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 function isSundayDate(dateValue: string) {
   if (!dateValue) return false;
   return dateValueToUtcDate(dateValue).getUTCDay() === 0;
@@ -139,6 +152,7 @@ export default function QuickAddJobForm() {
   const queryTime = searchParams.get("time") || "";
   const queryDuration = searchParams.get("duration") || "";
   const queryQuick = searchParams.get("quick") || "";
+  const queryShared = searchParams.get("shared") || "";
 
   const [clientName, setClientName] = useState("");
   const [phone, setPhone] = useState("");
@@ -172,6 +186,13 @@ export default function QuickAddJobForm() {
       workDate === queryDate &&
       durationMinutes === queryDuration &&
       !isSundaySelected
+  );
+
+  const trimmedClientName = clientName.trim();
+  const selectedDurationMinutes = Number(durationMinutes);
+  const selectedDateLabel = workDate ? formatLongDate(workDate) : "";
+  const cameFromGapSuggestion = Boolean(
+    queryQuick === "1" && queryDate && queryTime && queryDuration
   );
 
   const selectableTimes = useMemo(() => {
@@ -233,7 +254,9 @@ export default function QuickAddJobForm() {
     params.delete("duration");
     params.delete("edit");
 
-    router.replace(buildAgendaUrl(params));
+    router.replace(buildAgendaUrl(params, "#quick-add-job-form"), {
+      scroll: false,
+    });
   }
 
   useEffect(() => {
@@ -381,13 +404,13 @@ export default function QuickAddJobForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          client_name: clientName,
-          phone,
-          address,
+          client_name: trimmedClientName,
+          phone: phone.trim(),
+          address: address.trim(),
           work_date: workDate,
           start_time: startTime,
           duration_minutes: Number(durationMinutes),
-          notes,
+          notes: notes.trim(),
         }),
       });
 
@@ -416,9 +439,7 @@ export default function QuickAddJobForm() {
       params.delete("duration");
       params.delete("edit");
 
-      router.replace(
-        buildAgendaUrl(params, `#day-${savedWorkDate}`)
-      );
+      router.replace(buildAgendaUrl(params, `#day-${savedWorkDate}`));
 
       router.refresh();
     } catch (error) {
@@ -437,7 +458,6 @@ export default function QuickAddJobForm() {
     selectableTimes.length === 0;
 
   const firstAvailableTime = selectableTimes[0] ?? null;
-  const selectedDurationMinutes = Number(durationMinutes);
 
   return (
     <>
@@ -478,6 +498,34 @@ export default function QuickAddJobForm() {
           ) : null}
         </div>
 
+        {cameFromGapSuggestion ? (
+          <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-emerald-800">
+                  Hueco elegido
+                </p>
+                <p className="mt-1 text-sm text-emerald-700">
+                  {formatLongDate(queryDate)} · {queryTime} ·{" "}
+                  {formatDurationLabel(Number(queryDuration))}
+                </p>
+              </div>
+
+              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700">
+                Preparado desde la agenda
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+        {queryShared ? (
+          <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+            Estás viendo una agenda compartida en solo lectura, pero este
+            formulario <span className="font-semibold">siempre guarda</span> el
+            trabajo en <span className="font-semibold">tu propia agenda</span>.
+          </div>
+        ) : null}
+
         <form onSubmit={handleSubmit} className="mt-5 grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2">
@@ -487,7 +535,11 @@ export default function QuickAddJobForm() {
               <input
                 type="text"
                 value={clientName}
-                onChange={(event) => setClientName(event.target.value)}
+                onChange={(event) => {
+                  setClientName(event.target.value);
+                  setError(null);
+                  setSuccess(null);
+                }}
                 className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
                 placeholder="Nombre del cliente"
                 required
@@ -501,7 +553,11 @@ export default function QuickAddJobForm() {
               <input
                 type="text"
                 value={phone}
-                onChange={(event) => setPhone(event.target.value)}
+                onChange={(event) => {
+                  setPhone(event.target.value);
+                  setError(null);
+                  setSuccess(null);
+                }}
                 className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
                 placeholder="600123123"
               />
@@ -515,7 +571,11 @@ export default function QuickAddJobForm() {
             <input
               type="text"
               value={address}
-              onChange={(event) => setAddress(event.target.value)}
+              onChange={(event) => {
+                setAddress(event.target.value);
+                setError(null);
+                setSuccess(null);
+              }}
               className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
               placeholder="Calle, número, localidad"
             />
@@ -532,6 +592,8 @@ export default function QuickAddJobForm() {
                 onChange={(event) => {
                   const nextDate = event.target.value;
                   setWorkDate(nextDate);
+                  setStartTime("");
+                  setError(null);
                   setSuccess(null);
                   updateWeekInUrl(nextDate);
                 }}
@@ -544,7 +606,11 @@ export default function QuickAddJobForm() {
               <span className="text-sm font-medium text-slate-700">Hora *</span>
               <select
                 value={startTime}
-                onChange={(event) => setStartTime(event.target.value)}
+                onChange={(event) => {
+                  setStartTime(event.target.value);
+                  setError(null);
+                  setSuccess(null);
+                }}
                 className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500 disabled:bg-slate-100"
                 required
                 disabled={
@@ -577,7 +643,11 @@ export default function QuickAddJobForm() {
               </span>
               <select
                 value={durationMinutes}
-                onChange={(event) => setDurationMinutes(event.target.value)}
+                onChange={(event) => {
+                  setDurationMinutes(event.target.value);
+                  setError(null);
+                  setSuccess(null);
+                }}
                 className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
               >
                 {DURATION_OPTIONS.map((minutes) => (
@@ -635,12 +705,37 @@ export default function QuickAddJobForm() {
             )}
           </div>
 
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">
+                  Resumen rápido
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {selectedDateLabel}{" "}
+                  {startTime ? `· ${startTime}` : "· sin hora elegida"}{" "}
+                  {selectedDurationMinutes
+                    ? `· ${formatDurationLabel(selectedDurationMinutes)}`
+                    : null}
+                </p>
+              </div>
+
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                Se guarda en mi agenda
+              </span>
+            </div>
+          </div>
+
           <label className="grid gap-2">
             <span className="text-sm font-medium text-slate-700">Nota</span>
             <input
               type="text"
               value={notes}
-              onChange={(event) => setNotes(event.target.value)}
+              onChange={(event) => {
+                setNotes(event.target.value);
+                setError(null);
+                setSuccess(null);
+              }}
               className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
               placeholder="Cambiar grifo, revisar enchufe..."
             />
@@ -667,7 +762,8 @@ export default function QuickAddJobForm() {
                 loadingAvailability ||
                 !!availabilityError ||
                 selectableTimes.length === 0 ||
-                !startTime
+                !startTime ||
+                !trimmedClientName
               }
               className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >

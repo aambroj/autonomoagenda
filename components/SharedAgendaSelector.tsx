@@ -13,6 +13,11 @@ type SharedAgendaSelectorProps = {
   selectedUserId: string;
 };
 
+function buildNextUrl(params: URLSearchParams, pathname: string) {
+  const queryString = params.toString();
+  return queryString ? `${pathname}?${queryString}` : pathname;
+}
+
 export default function SharedAgendaSelector({
   options,
   selectedUserId,
@@ -24,14 +29,17 @@ export default function SharedAgendaSelector({
 
   const hasOptions = options.length > 0;
 
-  const currentLabel = useMemo(() => {
-    return (
-      options.find((option) => option.userId === selectedUserId)?.label ??
-      "Agenda compartida"
-    );
+  const selectedOption = useMemo(() => {
+    return options.find((option) => option.userId === selectedUserId) ?? null;
   }, [options, selectedUserId]);
 
+  const currentLabel = selectedOption?.label ?? "Agenda compartida";
+
   function handleChange(nextUserId: string) {
+    if (nextUserId === selectedUserId) {
+      return;
+    }
+
     const params = new URLSearchParams(searchParams.toString());
 
     if (!nextUserId) {
@@ -40,10 +48,15 @@ export default function SharedAgendaSelector({
       params.set("shared", nextUserId);
     }
 
-    const nextUrl = params.toString() ? `${pathname}?${params}` : pathname;
+    params.delete("edit");
+    params.delete("quick");
+    params.delete("time");
+    params.delete("duration");
+
+    const nextUrl = buildNextUrl(params, pathname);
 
     startTransition(() => {
-      router.replace(nextUrl);
+      router.replace(nextUrl, { scroll: false });
     });
   }
 
@@ -80,7 +93,8 @@ export default function SharedAgendaSelector({
           </h2>
           <p className="mt-1 text-sm text-slate-600">
             Puedes elegir qué agenda compartida quieres ver. La agenda ajena es
-            solo lectura.
+            solo lectura y se mantiene la semana y los filtros que ya tengas
+            aplicados.
           </p>
         </div>
 
@@ -106,9 +120,20 @@ export default function SharedAgendaSelector({
             ))}
           </select>
 
-          <p className="mt-2 text-xs text-slate-500">
-            Mostrando: <span className="font-semibold text-slate-700">{currentLabel}</span>
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <p className="text-xs text-slate-500">
+              Mostrando:{" "}
+              <span className="font-semibold text-slate-700">
+                {currentLabel}
+              </span>
+            </p>
+
+            {isPending ? (
+              <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700">
+                Cambiando...
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
     </section>

@@ -33,6 +33,7 @@ export default function LoginPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = useMemo(() => getSupabaseBrowser(), []);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -45,6 +46,8 @@ export default function LoginPageClient() {
   );
 
   const registered = searchParams.get("registered") === "1";
+  const resetSent = searchParams.get("resetSent") === "1";
+  const passwordUpdated = searchParams.get("passwordUpdated") === "1";
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,6 +68,13 @@ export default function LoginPageClient() {
 
     router.replace(redirectTo);
     router.refresh();
+  }
+
+  function handleUseAnotherEmail() {
+    setEmail("");
+    setPassword("");
+    setErrorMessage("");
+    setInfoMessage("Puedes probar ahora con otro correo.");
   }
 
   return (
@@ -99,6 +109,19 @@ export default function LoginPageClient() {
             </div>
           ) : null}
 
+          {resetSent ? (
+            <div className="mb-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800">
+              Revisa tu correo. Te hemos enviado las instrucciones para
+              recuperar la contraseña.
+            </div>
+          ) : null}
+
+          {passwordUpdated ? (
+            <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+              Contraseña actualizada correctamente. Ya puedes entrar.
+            </div>
+          ) : null}
+
           {infoMessage ? (
             <div className="mb-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800">
               {infoMessage}
@@ -124,7 +147,10 @@ export default function LoginPageClient() {
                 type="email"
                 autoComplete="email"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setErrorMessage("");
+                }}
                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-500"
                 placeholder="tuemail@ejemplo.com"
                 required
@@ -132,32 +158,59 @@ export default function LoginPageClient() {
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Contraseña
-              </label>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-semibold text-slate-700"
+                >
+                  Contraseña
+                </label>
+
+                <Link
+                  href="/recuperar-contrasena"
+                  className="text-sm font-semibold text-slate-700 underline underline-offset-4 transition hover:text-slate-900"
+                >
+                  He olvidado mi contraseña
+                </Link>
+              </div>
+
               <input
                 id="password"
                 type="password"
                 autoComplete="current-password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setErrorMessage("");
+                }}
                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-500"
                 placeholder="Tu contraseña"
                 required
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="mt-2 inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-base font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitting ? "Entrando..." : "Entrar"}
-            </button>
+            <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-base font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? "Entrando..." : "Entrar"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleUseAnotherEmail}
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-base font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Usar otro email
+              </button>
+            </div>
           </form>
+
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            Tu usuario es el <span className="font-semibold text-slate-900">email con el que te registraste</span>. Si no recuerdas cuál era, prueba con tus correos habituales o usa la recuperación de contraseña.
+          </div>
 
           <p className="mt-5 text-sm text-slate-600">
             ¿Todavía no tienes cuenta?{" "}

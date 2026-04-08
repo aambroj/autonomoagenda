@@ -57,6 +57,25 @@ export default function AgendaFilters({
         array.findIndex((item) => item.value === day.value) === index
     );
 
+  const selectedDayExists = safeAvailableDays.some(
+    (day) => day.value === initialDay
+  );
+
+  const safeDayOptions =
+    initialDay && !selectedDayExists
+      ? [
+          {
+            value: initialDay,
+            label: initialDay,
+          },
+          ...safeAvailableDays,
+        ]
+      : safeAvailableDays;
+
+  const hasActiveFilters = Boolean(
+    initialQuery.trim() || initialStatus.trim() || initialDay.trim()
+  );
+
   const clearHref = buildClearHref({
     initialWeek,
     initialShared,
@@ -64,14 +83,39 @@ export default function AgendaFilters({
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">
             Buscar y filtrar trabajos
           </h2>
           <p className="mt-1 text-sm text-slate-600">
-            Localiza trabajos rápidamente por cliente, estado o día.
+            Localiza trabajos rápidamente por cliente, estado o día sin salir de
+            la semana que estás viendo.
           </p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {initialWeek ? (
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                Semana fija
+              </span>
+            ) : null}
+
+            {initialShared ? (
+              <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                Mantener agenda compartida
+              </span>
+            ) : null}
+
+            {hasActiveFilters ? (
+              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                Filtros activos
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                Sin filtros activos
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -128,7 +172,7 @@ export default function AgendaFilters({
             >
               <option value="">Todos los días</option>
 
-              {safeAvailableDays.map((day) => (
+              {safeDayOptions.map((day) => (
                 <option key={`day-${day.value}`} value={day.value}>
                   {day.label}
                 </option>
@@ -148,7 +192,7 @@ export default function AgendaFilters({
               href={clearHref}
               className="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
-              Limpiar
+              Limpiar filtros
             </Link>
           </div>
         </div>

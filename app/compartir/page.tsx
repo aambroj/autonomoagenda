@@ -10,8 +10,9 @@ import SharedReceivedInvitesAutoFocus from "@/components/SharedReceivedInvitesAu
 import { getSupabaseServer } from "@/lib/supabase-server";
 
 export const metadata: Metadata = {
-  title: "Compartir",
-  description: "Compartir agenda con otros profesionales en AutonomoAgenda.",
+  title: "Compartir agenda | AutonomoAgenda",
+  description:
+    "Invita a otro profesional, comparte visibilidad de agenda en solo lectura y deja de compartir cuando quieras en AutonomoAgenda.",
 };
 
 export const dynamic = "force-dynamic";
@@ -178,6 +179,28 @@ function getBestLinkLabel(params: {
   return "Otro profesional conectado";
 }
 
+function renderSummaryCard(params: {
+  title: string;
+  value: number;
+  subtitle: string;
+  valueClasses: string;
+  cardClasses: string;
+}) {
+  const { title, value, subtitle, valueClasses, cardClasses } = params;
+
+  return (
+    <article className={`rounded-3xl border p-5 shadow-sm ${cardClasses}`}>
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+        {title}
+      </p>
+      <p className={`mt-2 text-4xl font-black leading-none ${valueClasses}`}>
+        {value}
+      </p>
+      <p className="mt-2 text-sm text-slate-600">{subtitle}</p>
+    </article>
+  );
+}
+
 export default async function CompartirPage() {
   const supabase = await getSupabaseServer();
 
@@ -216,6 +239,10 @@ export default async function CompartirPage() {
     .filter((invite) => invite.inviter_user_id !== user.id);
 
   const pendingReceivedInvites = receivedInvites.filter(
+    (invite) => invite.status === "pending"
+  );
+
+  const pendingSentInvites = sentInvites.filter(
     (invite) => invite.status === "pending"
   );
 
@@ -286,9 +313,94 @@ export default async function CompartirPage() {
           </p>
         </section>
 
+        <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {renderSummaryCard({
+            title: "Conexiones activas",
+            value: activeLinks.length,
+            subtitle:
+              "Profesionales con los que ya tienes visibilidad mutua en solo lectura.",
+            valueClasses: "text-emerald-700",
+            cardClasses: "border-emerald-200 bg-white",
+          })}
+
+          {renderSummaryCard({
+            title: "Pendientes recibidas",
+            value: pendingReceivedInvites.length,
+            subtitle:
+              "Invitaciones que puedes aceptar o rechazar ahora mismo.",
+            valueClasses: "text-amber-700",
+            cardClasses: "border-amber-200 bg-white",
+          })}
+
+          {renderSummaryCard({
+            title: "Pendientes enviadas",
+            value: pendingSentInvites.length,
+            subtitle:
+              "Invitaciones que aún dependen de la respuesta del otro profesional.",
+            valueClasses: "text-sky-700",
+            cardClasses: "border-sky-200 bg-white",
+          })}
+        </section>
+
         <div className="mt-6">
           <ShareAgendaInviteForm />
         </div>
+
+        <section className="mt-6 rounded-3xl border border-emerald-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">
+                Conexiones activas
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Estas conexiones ya están funcionando.
+                <span className="font-semibold text-slate-800">
+                  {" "}
+                  Ambos podéis ver la agenda del otro en solo lectura
+                </span>{" "}
+                y seguirán activas hasta que uno de los dos deje de compartir.
+              </p>
+            </div>
+
+            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+              {activeLinks.length} conexión
+              {activeLinks.length === 1 ? "" : "es"} activa
+              {activeLinks.length === 1 ? "" : "s"}
+            </span>
+          </div>
+
+          {activeLinkOptions.length === 0 ? (
+            <div className="mt-5 rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 py-4 text-base font-semibold text-slate-600">
+              Todavía no tienes conexiones activas.
+            </div>
+          ) : (
+            <div className="mt-5 grid gap-3">
+              {activeLinkOptions.map((link) => (
+                <article
+                  key={link.id}
+                  className="rounded-3xl border border-emerald-200 bg-emerald-50/40 p-5"
+                >
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-lg font-bold text-slate-900">
+                          {link.label}
+                        </p>
+                        <span className="inline-flex rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-bold text-emerald-700">
+                          Activa
+                        </span>
+                      </div>
+
+                      <p className="mt-2 text-sm text-slate-600">
+                        {link.description}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
         <div className="mt-6">
           <DeactivateSharedLinkForm links={activeLinkOptions} />
