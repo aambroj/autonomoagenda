@@ -12,12 +12,13 @@ export async function GET() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0f172a",
+          background:
+            "linear-gradient(135deg, #1473ff 0%, #1e8fff 55%, #20d7ff 100%)",
           color: "#ffffff",
           fontSize: 220,
           fontWeight: 900,
           borderRadius: 120,
-          letterSpacing: -12,
+          letterSpacing: "-12px",
         }}
       >
         AA
