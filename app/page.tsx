@@ -133,7 +133,12 @@ export default function HomePage() {
               Encaja trabajos sin liarte con una agenda pesada
             </h1>
 
-            <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600 sm:text-xl">
+            <p className="mt-4 max-w-3xl text-base font-semibold leading-7 text-sky-800 sm:text-lg">
+              Puedes compartir tu agenda con los profesionales que desees,
+              siempre que también estén registrados.
+            </p>
+
+            <p className="mt-4 max-w-3xl text-lg leading-8 text-slate-600 sm:text-xl">
               AutonomoAgenda está pensado para autónomos que necesitan ver rápido
               sus próximos huecos, apuntar trabajos sin perder tiempo y mantener
               su jornada ordenada de forma simple, clara y profesional.
@@ -237,13 +242,6 @@ export default function HomePage() {
                     </span>
                   </div>
                 </div>
-
-                <div className="rounded-3xl border border-slate-200/80 bg-white p-4 shadow-sm">
-                  <p className="text-sm font-semibold leading-6 text-slate-600 sm:text-base">
-                    Dentro no hace falta marketing, solo una herramienta rápida
-                    para trabajar mejor.
-                  </p>
-                </div>
               </div>
             </div>
           </div>
@@ -259,14 +257,9 @@ export default function HomePage() {
             <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
               Un producto claro por fuera y útil por dentro
             </h2>
-            <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
-              La portada sirve para explicar y captar. La cuenta sirve para
-              trabajar. Así AutonomoAgenda sigue siendo sencillo, rápido y fácil
-              de entender.
-            </p>
           </div>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
             {benefits.map((item) => (
               <article
                 key={item.title}
@@ -284,7 +277,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="px-4 py-4 sm:px-6 sm:py-6">
+      <section className="px-4 py-3 sm:px-6 sm:py-4">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/70 bg-white/78 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-8">
           <div className="max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -317,7 +310,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="px-4 py-4 sm:px-6 sm:py-6">
+      <section className="px-4 py-3 sm:px-6 sm:py-4">
         <div className="mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-slate-900/20 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-800 p-6 shadow-[0_24px_60px_rgba(2,6,23,0.28)] sm:p-8">
           <div className="max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] !text-sky-100">
@@ -364,7 +357,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="px-4 py-4 sm:px-6 sm:py-6">
+      <section className="px-4 py-3 sm:px-6 sm:py-4">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/70 bg-white/78 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-8">
           <div className="max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -410,56 +403,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="px-4 py-4 sm:px-6 sm:py-6">
-        <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/70 bg-white/78 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-8">
-          <div className="max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Información y soporte
-            </p>
-            <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-              ¿Necesitas escribirnos?
-            </h2>
-            <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
-              Puedes usar cualquiera de estos dos correos para información
-              general o soporte del software.
-            </p>
-          </div>
-
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
-            <a
-              href="mailto:alber.ambroj@gmail.com"
-              className="rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
-            >
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Correo 1
-              </p>
-              <p className="mt-3 break-all text-lg font-bold text-slate-900 sm:text-xl">
-                alber.ambroj@gmail.com
-              </p>
-              <p className="mt-2 text-sm text-slate-600 sm:text-base">
-                Información y soporte de AutonomoAgenda.
-              </p>
-            </a>
-
-            <a
-              href="mailto:aambroj@yahoo.es"
-              className="rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
-            >
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Correo 2
-              </p>
-              <p className="mt-3 break-all text-lg font-bold text-slate-900 sm:text-xl">
-                aambroj@yahoo.es
-              </p>
-              <p className="mt-2 text-sm text-slate-600 sm:text-base">
-                Información y soporte de AutonomoAgenda.
-              </p>
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <section className="px-4 pb-10 pt-4 sm:px-6 sm:pb-14 sm:pt-6">
+      <section className="px-4 pb-8 pt-3 sm:px-6 sm:pb-10 sm:pt-4">
         <div className="mx-auto max-w-4xl rounded-[2rem] border border-white/70 bg-white/82 p-6 text-center shadow-[0_18px_50px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:p-10">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
             Empieza hoy
