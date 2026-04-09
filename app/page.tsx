@@ -122,7 +122,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="px-4 pb-8 pt-8 sm:px-6 sm:pb-10 sm:pt-12">
+      <section className="px-4 pb-3 pt-8 sm:px-6 sm:pb-4 sm:pt-12">
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
           <div>
             <div className="inline-flex items-center rounded-full border border-sky-200/80 bg-white/80 px-4 py-2 text-sm font-semibold text-sky-700 shadow-sm backdrop-blur">
@@ -167,11 +167,6 @@ export default function HomePage() {
 
               <InstallAppButton />
             </div>
-
-            <p className="mt-4 text-sm leading-6 text-slate-500 sm:text-base">
-              La parte comercial vive aquí fuera. Dentro, la agenda de trabajo
-              será rápida, ligera y sin ruido.
-            </p>
           </div>
 
           <div className="rounded-[2rem] border border-white/70 bg-white/78 p-4 shadow-[0_20px_60px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:p-6">
@@ -255,7 +250,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="px-4 py-4 sm:px-6 sm:py-6">
+      <section className="px-4 py-2 sm:px-6 sm:py-3">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/70 bg-white/78 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-8">
           <div className="max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
