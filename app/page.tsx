@@ -323,17 +323,17 @@ export default function HomePage() {
       </section>
 
       <section className="px-4 py-4 sm:px-6 sm:py-6">
-        <div className="mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-slate-800/20 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950 p-6 text-white shadow-[0_24px_60px_rgba(2,6,23,0.28)] sm:p-8">
+        <div className="mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-slate-800/20 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-900 p-6 shadow-[0_24px_60px_rgba(2,6,23,0.28)] sm:p-8">
           <div className="max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-300">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-100/90">
               Acceso compartido entre profesionales
             </p>
 
-            <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
               Cada autónomo con su cuenta. Cada uno paga la suya.
             </h2>
 
-            <p className="mt-4 text-base leading-7 text-slate-300 sm:text-lg">
+            <p className="mt-4 text-base leading-7 text-slate-200 sm:text-lg">
               AutonomoAgenda está pensado para que cada profesional tenga su
               propia agenda y, si ambos tienen cuenta activa, puedan verse en
               modo solo lectura. Sin editar la agenda ajena. Sin perder control.
@@ -342,25 +342,25 @@ export default function HomePage() {
           </div>
 
           <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <div className="rounded-3xl border border-white/10 bg-white/8 p-5 backdrop-blur">
-              <p className="text-lg font-bold">Cuenta propia</p>
-              <p className="mt-2 text-sm leading-6 text-slate-300">
+            <div className="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
+              <p className="text-lg font-bold text-white">Cuenta propia</p>
+              <p className="mt-2 text-sm leading-6 text-slate-200">
                 Cada autónomo entra con su usuario y trabaja sobre su propia
                 agenda.
               </p>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-white/8 p-5 backdrop-blur">
-              <p className="text-lg font-bold">Visibilidad cruzada</p>
-              <p className="mt-2 text-sm leading-6 text-slate-300">
+            <div className="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
+              <p className="text-lg font-bold text-white">Visibilidad cruzada</p>
+              <p className="mt-2 text-sm leading-6 text-slate-200">
                 Si ambos tienen cuenta activa, podrán ver la agenda del otro en
                 solo lectura.
               </p>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-white/8 p-5 backdrop-blur">
-              <p className="text-lg font-bold">Control reversible</p>
-              <p className="mt-2 text-sm leading-6 text-slate-300">
+            <div className="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
+              <p className="text-lg font-bold text-white">Control reversible</p>
+              <p className="mt-2 text-sm leading-6 text-slate-200">
                 Compartir, dejar de compartir y volver a compartir cuando
                 quieran.
               </p>
