@@ -102,17 +102,37 @@ export default function InstallAppButton() {
       <button
         type="button"
         onClick={handleInstall}
-        className="inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl border border-slate-300/90 bg-white/85 px-6 py-3.5 text-base font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:bg-white sm:w-auto"
+        className="inline-flex min-h-[64px] w-full items-center justify-center rounded-2xl border border-sky-200/90 bg-gradient-to-br from-sky-50 via-white to-cyan-50 px-5 py-3 text-center shadow-[0_12px_30px_rgba(14,165,233,0.10)] transition hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-[0_16px_36px_rgba(14,165,233,0.16)] sm:w-auto"
       >
-        {busy ? "Abriendo instalación..." : "Instalar app"}
+        {busy ? (
+          <span className="text-sm font-bold text-sky-900 sm:text-base">
+            Abriendo instalación...
+          </span>
+        ) : (
+          <span className="flex flex-col items-center justify-center leading-tight">
+            <span className="inline-flex items-center rounded-full border border-sky-200 bg-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-sky-700 shadow-sm">
+              App
+            </span>
+            <span className="mt-1.5 text-base font-bold text-slate-900">
+              Instalar en móvil o tablet
+            </span>
+            <span className="mt-1 text-xs font-medium text-slate-500">
+              Android, iPhone y iPad
+            </span>
+          </span>
+        )}
       </button>
+
+      <p className="mt-2 text-center text-xs leading-5 text-slate-500 sm:text-left">
+        Añádela a tu pantalla de inicio para abrirla como app.
+      </p>
 
       {showIOSHelp ? (
         <div className="mt-3 rounded-[1.5rem] border border-white/70 bg-white/88 px-4 py-4 text-left text-sm leading-6 text-slate-700 shadow-[0_14px_36px_rgba(15,23,42,0.08)] backdrop-blur-xl">
           {ios ? (
             <>
               <p className="font-bold text-slate-900">
-                Instalación en iPhone o iPad
+                Instalar en iPhone o iPad
               </p>
               <p className="mt-2">
                 Abre AutonomoAgenda en <span className="font-semibold">Safari</span>,
@@ -126,7 +146,7 @@ export default function InstallAppButton() {
           ) : (
             <>
               <p className="font-bold text-slate-900">
-                Instalación desde el navegador
+                Instalar en Android o tablet
               </p>
               <p className="mt-2">
                 Si no aparece el cuadro automático, abre el menú del navegador y
