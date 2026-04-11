@@ -8,6 +8,12 @@ import DeactivateSharedLinkForm, {
 
 export const dynamic = "force-dynamic";
 
+type CompartirPageProps = {
+  searchParams?: Promise<{
+    q?: string;
+  }>;
+};
+
 type InviteRow = {
   id: string;
   inviter_user_id: string;
@@ -38,16 +44,24 @@ type ActiveLinkCard = {
   inviteId: string | null;
   partnerUserId: string;
   title: string;
+  partnerBaseName: string | null;
   partnerEmail: string | null;
   createdAt: string | null;
   aliasPlaceholder: string;
-  baseName: string;
-  isUsingCustomAlias: boolean;
+  hasCustomAlias: boolean;
   agendaHref: string;
 };
 
 function normalizeEmail(value: string | null | undefined) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function normalizeText(value: string | null | undefined) {
+  return (value ?? "")
+    .trim()
+    .toLocaleLowerCase("es")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 function formatDate(value: string | null | undefined) {
@@ -84,7 +98,17 @@ function getPendingOutgoingLabel(invite: InviteRow) {
       : "Profesional invitado";
 }
 
-export default async function CompartirPage() {
+function matchesConnectionQuery(link: ActiveLinkCard, query: string) {
+  if (!query) return true;
+
+  const haystack = normalizeText(
+    [link.title, link.partnerBaseName, link.partnerEmail].filter(Boolean).join(" ")
+  );
+
+  return haystack.includes(normalizeText(query));
+}
+
+export default async function CompartirPage({ searchParams }: CompartirPageProps) {
   const supabase = await getSupabaseServer();
 
   const {
@@ -95,6 +119,9 @@ export default async function CompartirPage() {
   if (userError || !user) {
     redirect("/login?redirectTo=/compartir");
   }
+
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const query = (resolvedSearchParams.q ?? "").trim();
 
   const currentUserId = user.id;
   const currentUserEmail = normalizeEmail(user.email);
@@ -168,33 +195,31 @@ export default async function CompartirPage() {
         ? matchingInvite.invitee_email
         : matchingInvite?.inviter_email;
 
-    const fallbackName =
-      getDisplayNameFromProfile(partnerProfile) ||
-      partnerEmail?.trim() ||
-      "Profesional conectado";
+    const partnerBaseName =
+      getDisplayNameFromProfile(partnerProfile) || partnerEmail?.trim() || null;
 
-    const trimmedAlias = aliasForCurrentUser?.trim() || "";
-    const isUsingCustomAlias = Boolean(trimmedAlias);
-    const visibleName = trimmedAlias || fallbackName;
-    const agendaHref = `/agenda?shared=${encodeURIComponent(
-      partnerUserId
-    )}#agenda-compartida`;
+    const normalizedAlias = aliasForCurrentUser?.trim() || "";
+    const visibleName = normalizedAlias || partnerBaseName || "Profesional conectado";
 
     return {
       id: String(link.id),
       inviteId: matchingInvite?.id ?? null,
       partnerUserId,
       title: visibleName,
+      partnerBaseName,
       partnerEmail: partnerEmail?.trim() || null,
       createdAt: link.created_at ?? null,
       aliasPlaceholder: partnerEmail?.trim()
         ? `Ejemplo: ${partnerEmail.trim()}`
         : "Nombre para este compañero",
-      baseName: fallbackName,
-      isUsingCustomAlias,
-      agendaHref,
+      hasCustomAlias: Boolean(normalizedAlias),
+      agendaHref: `/agenda?shared=${encodeURIComponent(partnerUserId)}#agenda-compartida`,
     };
   });
+
+  const filteredActiveLinkCards = activeLinkCards.filter((link) =>
+    matchesConnectionQuery(link, query)
+  );
 
   const activeLinkOptions: ActiveLinkOption[] = activeLinkCards.map((link) => ({
     id: link.id,
@@ -270,81 +295,116 @@ export default async function CompartirPage() {
           </div>
 
           {activeLinkCards.length ? (
-            <div className="mt-5 space-y-4">
-              {activeLinkCards.map((link) => (
-                <article
-                  key={link.id}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+            <>
+              <form action="/compartir" method="get" className="mt-5">
+                <label
+                  htmlFor="connections-search"
+                  className="block text-sm font-medium text-slate-700"
                 >
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base font-semibold text-slate-900">
-                            {link.title}
-                          </h3>
+                  Buscar conexión
+                </label>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    id="connections-search"
+                    name="q"
+                    type="text"
+                    defaultValue={query}
+                    placeholder="Buscar por alias, nombre o email"
+                    className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                  />
+                  <button
+                    type="submit"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  >
+                    Buscar
+                  </button>
+                  {query ? (
+                    <Link
+                      href="/compartir"
+                      className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
+                    >
+                      Limpiar
+                    </Link>
+                  ) : null}
+                </div>
+              </form>
 
-                          {link.isUsingCustomAlias ? (
-                            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700">
-                              Alias personalizado
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700">
+                  Mostrando {filteredActiveLinkCards.length} de {activeLinkCards.length}
+                </span>
+                {query ? (
+                  <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700">
+                    Filtro activo: {query}
+                  </span>
+                ) : null}
+              </div>
+
+              {filteredActiveLinkCards.length ? (
+                <div className="mt-5 space-y-4">
+                  {filteredActiveLinkCards.map((link) => (
+                    <article
+                      key={link.id}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-base font-semibold text-slate-900">
+                              {link.title}
+                            </h3>
+
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                                link.hasCustomAlias
+                                  ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                                  : "border border-slate-200 bg-white text-slate-600"
+                              }`}
+                            >
+                              {link.hasCustomAlias ? "Alias personalizado" : "Sin alias personalizado"}
                             </span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-600">
-                              Sin alias propio
+                          </div>
+
+                          {link.partnerBaseName && link.partnerBaseName !== link.title ? (
+                            <p className="mt-1 text-sm text-slate-600">
+                              Nombre base: {link.partnerBaseName}
+                            </p>
+                          ) : null}
+
+                          {link.partnerEmail ? (
+                            <p className="mt-1 break-all text-sm text-slate-600">
+                              {link.partnerEmail}
+                            </p>
+                          ) : null}
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <span className="inline-flex items-center rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-semibold text-sky-700">
+                              Se abrirá en solo lectura
                             </span>
-                          )}
+                            <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                              Conectado desde {formatDate(link.createdAt)}
+                            </span>
+                          </div>
                         </div>
 
-                        {link.partnerEmail ? (
-                          <p className="mt-1 break-all text-sm text-slate-600">
-                            {link.partnerEmail}
-                          </p>
-                        ) : null}
-
-                        <p className="mt-2 text-xs text-slate-500">
-                          Conectado desde {formatDate(link.createdAt)}
-                        </p>
+                        <Link
+                          href={link.agendaHref}
+                          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
+                        >
+                          Ver esta agenda
+                        </Link>
                       </div>
-
-                      <Link
-                        href={link.agendaHref}
-                        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
-                      >
-                        Ver esta agenda
-                      </Link>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Nombre visible en agenda
-                        </p>
-                        <p className="mt-1 text-sm font-bold text-slate-900 sm:text-base">
-                          {link.title}
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-slate-500">
-                          Es el nombre que verás en el selector y en la vista compartida.
-                        </p>
-                      </div>
-
-                      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Nombre base del compañero
-                        </p>
-                        <p className="mt-1 text-sm font-bold text-slate-900 sm:text-base">
-                          {link.baseName}
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-slate-500">
-                          {link.isUsingCustomAlias
-                            ? "Tienes puesto un alias por encima de este nombre base."
-                            : "Ahora mismo se está usando este nombre base porque no has guardado un alias propio."}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
+                  <p className="text-sm text-slate-600">
+                    No se ha encontrado ninguna conexión con ese texto.
+                  </p>
+                </div>
+              )}
+            </>
           ) : (
             <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
               <p className="text-sm text-slate-600">
