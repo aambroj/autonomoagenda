@@ -735,6 +735,32 @@ function buildWeekNavigationHref(params: {
   return `/agenda?${search.toString()}`;
 }
 
+function buildOwnAgendaHref(params: {
+  q?: string;
+  status?: string;
+  day?: string;
+  weekDate: string;
+}) {
+  const search = new URLSearchParams();
+
+  if (params.q?.trim()) {
+    search.set("q", params.q.trim());
+  }
+
+  if (params.status?.trim()) {
+    search.set("status", params.status.trim());
+  }
+
+  if (params.day?.trim()) {
+    search.set("day", params.day.trim());
+  }
+
+  search.set("week", params.weekDate);
+  search.set("date", params.weekDate);
+
+  return `/agenda?${search.toString()}#mi-agenda`;
+}
+
 function getTotalFreeMinutes(gaps: TimeGap[]) {
   return gaps.reduce((total, gap) => total + gap.minutes, 0);
 }
@@ -1636,23 +1662,44 @@ function renderSharedAgendaSection(params: {
   data: AgendaComputedData;
   anchorDate: string;
   hasActiveFilters: boolean;
+  backToOwnAgendaHref: string;
   errorMessage?: string | null;
 }) {
-  const { owner, data, hasActiveFilters, errorMessage } = params;
+  const { owner, data, hasActiveFilters, backToOwnAgendaHref, errorMessage } = params;
 
   return (
     <section className="mt-8 rounded-[2rem] border border-white/70 bg-white/82 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:p-6">
       <div className="rounded-3xl border border-sky-200 bg-sky-50 px-4 py-4 sm:px-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 sm:text-sm">
-          Solo lectura
-        </p>
-        <p className="mt-2 text-lg font-bold text-slate-900 sm:text-xl">
-          Estás viendo la agenda de {owner.label}
-        </p>
-        <p className="mt-1 text-sm leading-6 text-slate-600 sm:text-base">
-          Puedes consultarla completa, pero no editar trabajos, no cambiar
-          estados y no tocar la agenda ajena.
-        </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 sm:text-sm">
+              Solo lectura
+            </p>
+            <p className="mt-2 text-lg font-bold text-slate-900 sm:text-xl">
+              Estás viendo la agenda de {owner.label}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-slate-600 sm:text-base">
+              Puedes consultarla completa, pero no editar trabajos, no cambiar
+              estados y no tocar la agenda ajena.
+            </p>
+          </div>
+
+          <span className="inline-flex items-center self-start rounded-full border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700">
+            Agenda ajena
+          </span>
+        </div>
+
+        <div className="mt-4 rounded-3xl border border-sky-300 bg-white px-4 py-4 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 sm:text-xs">
+            Profesional visible ahora
+          </p>
+          <p className="mt-2 break-words text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+            {owner.label}
+          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Todo lo que ves debajo pertenece a esta agenda compartida.
+          </p>
+        </div>
       </div>
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -1668,9 +1715,18 @@ function renderSharedAgendaSection(params: {
           </p>
         </div>
 
-        <span className="inline-flex items-center self-start rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 sm:self-auto">
-          Solo lectura
-        </span>
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <Link
+            href={backToOwnAgendaHref}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
+          >
+            Volver a mi agenda
+          </Link>
+
+          <span className="inline-flex items-center self-start rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 sm:self-auto">
+            Solo lectura
+          </span>
+        </div>
       </div>
 
       {errorMessage ? (
@@ -2173,6 +2229,13 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
       (item) => item.owner.userId === selectedSharedUserId
     ) ?? sharedAgendaData[0] ?? null;
 
+  const ownAgendaHref = buildOwnAgendaHref({
+    q: query,
+    status,
+    day,
+    weekDate: anchorDate,
+  });
+
   const summaryDateLabel = day
     ? formatDateLabel(day)
     : anchorDate === todayInMadrid
@@ -2297,7 +2360,10 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
           />
         </div>
 
-        <section className="mt-5 rounded-[2rem] border border-white/70 bg-white/82 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-6">
+        <section
+          id="mi-agenda"
+          className="mt-5 rounded-[2rem] border border-white/70 bg-white/82 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-6"
+        >
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
@@ -3224,9 +3290,10 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
               </div>
             ) : null}
 
-             <section id="agenda-compartida" className="mt-8 rounded-[2rem] border border-sky-200/80 bg-white/82 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-6"
-             >
-              
+            <section
+              id="agenda-compartida"
+              className="mt-8 rounded-[2rem] border border-sky-200/80 bg-white/82 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-6"
+            >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 sm:text-sm">
@@ -3270,6 +3337,7 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
                   data: selectedSharedAgenda.data,
                   anchorDate,
                   hasActiveFilters,
+                  backToOwnAgendaHref: ownAgendaHref,
                 })}
               </div>
             ) : null}
