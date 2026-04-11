@@ -1518,6 +1518,62 @@ function buildAgendaComputedData(params: {
   } satisfies AgendaComputedData;
 }
 
+function findAcceptedInviteForLink(params: {
+  link: LinkRow;
+  invites: InviteRow[];
+  inviteMap: Map<string, InviteRow>;
+  currentUserId: string;
+  currentUserEmail: string;
+}) {
+  const { link, invites, inviteMap, currentUserId, currentUserEmail } = params;
+
+  if (link.created_from_invite_id) {
+    const inviteFromId = inviteMap.get(link.created_from_invite_id);
+    if (inviteFromId) {
+      return inviteFromId;
+    }
+  }
+
+  const otherUserId =
+    link.user_a_id === currentUserId ? link.user_b_id : link.user_a_id;
+
+  const normalizedCurrentEmail = normalizeText(currentUserEmail);
+
+  return (
+    invites.find((invite) => {
+      if (invite.status !== "accepted") {
+        return false;
+      }
+
+      const matchesPairByUserIds =
+        (invite.inviter_user_id === currentUserId &&
+          invite.invitee_user_id === otherUserId) ||
+        (invite.inviter_user_id === otherUserId &&
+          invite.invitee_user_id === currentUserId);
+
+      if (matchesPairByUserIds) {
+        return true;
+      }
+
+      const normalizedInviterEmail = normalizeText(invite.inviter_email ?? "");
+      const normalizedInviteeEmail = normalizeText(invite.invitee_email);
+
+      const currentUserMatchesInviteeEmail =
+        normalizedInviteeEmail === normalizedCurrentEmail;
+
+      const currentUserMatchesInviterEmail =
+        normalizedInviterEmail === normalizedCurrentEmail;
+
+      return (
+        (invite.inviter_user_id === otherUserId &&
+          currentUserMatchesInviteeEmail) ||
+        (invite.invitee_user_id === otherUserId &&
+          currentUserMatchesInviterEmail)
+      );
+    }) ?? null
+  );
+}
+
 function getSharedAgendaLabel(params: {
   link: LinkRow;
   invite: InviteRow | null;
@@ -1966,28 +2022,32 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
 
   const activeLinks = ((activeLinksData as LinkRow[]) ?? []).filter(Boolean);
 
-  const inviteIds = activeLinks
-    .map((link) => link.created_from_invite_id)
-    .filter((value): value is string => Boolean(value));
-
   const { data: inviteData, error: inviteError } =
-    inviteIds.length === 0
+    activeLinks.length === 0
       ? { data: [] as InviteRow[], error: null }
       : await supabase
           .from("shared_agenda_invites")
           .select("*")
-          .in("id", inviteIds);
+          .eq("status", "accepted")
+          .or(
+            `inviter_user_id.eq.${user.id},invitee_user_id.eq.${user.id},invitee_email.eq.${normalizedUserEmail}`
+          )
+          .order("created_at", { ascending: false });
+
+  const acceptedInvites = ((inviteData as InviteRow[]) ?? []).filter(Boolean);
 
   const inviteMap = new Map(
-    (((inviteData as InviteRow[]) ?? []).filter(Boolean) as InviteRow[]).map(
-      (invite) => [invite.id, invite]
-    )
+    acceptedInvites.map((invite) => [invite.id, invite])
   );
 
   const sharedOwners: AgendaOwner[] = activeLinks.map((link, index) => {
-    const invite = link.created_from_invite_id
-      ? inviteMap.get(link.created_from_invite_id) ?? null
-      : null;
+    const invite = findAcceptedInviteForLink({
+      link,
+      invites: acceptedInvites,
+      inviteMap,
+      currentUserId: user.id,
+      currentUserEmail: normalizedUserEmail,
+    });
 
     const sharedInfo = getSharedAgendaLabel({
       link,
