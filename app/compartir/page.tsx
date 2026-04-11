@@ -12,6 +12,7 @@ type CompartirPageProps = {
   searchParams?: Promise<{
     q?: string;
     editAlias?: string;
+    focusLink?: string;
   }>;
 };
 
@@ -101,6 +102,7 @@ function getPendingOutgoingLabel(invite: InviteRow) {
 function buildCompartirHref(params: {
   q?: string;
   editAlias?: string;
+  focusLink?: string;
   hash?: string;
 }) {
   const search = new URLSearchParams();
@@ -113,18 +115,22 @@ function buildCompartirHref(params: {
     search.set("editAlias", params.editAlias.trim());
   }
 
+  if (params.focusLink?.trim()) {
+    search.set("focusLink", params.focusLink.trim());
+  }
+
   const queryString = search.toString();
   const base = queryString ? `/compartir?${queryString}` : "/compartir";
 
   return params.hash ? `${base}#${params.hash}` : base;
 }
 
-function renderActionButtonClasses(variant: "primary" | "secondary" = "secondary") {
-  if (variant === "primary") {
-    return "inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto";
-  }
-
+function getSecondaryButtonClasses() {
   return "inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 sm:w-auto";
+}
+
+function getPrimaryButtonClasses() {
+  return "inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto";
 }
 
 export default async function CompartirPage({
@@ -144,6 +150,7 @@ export default async function CompartirPage({
   const resolvedSearchParams = (await searchParams) ?? {};
   const searchQuery = (resolvedSearchParams.q ?? "").trim();
   const requestedEditAlias = (resolvedSearchParams.editAlias ?? "").trim();
+  const requestedFocusLink = (resolvedSearchParams.focusLink ?? "").trim();
   const normalizedSearchQuery = normalizeText(searchQuery);
 
   const currentUserId = user.id;
@@ -245,17 +252,36 @@ export default async function CompartirPage({
     };
   });
 
-  const filteredActiveLinkCards = activeLinkCards.filter((link) => {
-    if (!normalizedSearchQuery) {
-      return true;
-    }
+  const filteredActiveLinkCards = activeLinkCards
+    .filter((link) => {
+      if (!normalizedSearchQuery) {
+        return true;
+      }
 
-    const haystack = normalizeText(
-      [link.title, link.baseName, link.partnerEmail].filter(Boolean).join(" ")
-    );
+      const haystack = normalizeText(
+        [link.title, link.baseName, link.partnerEmail].filter(Boolean).join(" ")
+      );
 
-    return haystack.includes(normalizedSearchQuery);
-  });
+      return haystack.includes(normalizedSearchQuery);
+    })
+    .sort((a, b) => {
+      const aIsHighlighted = requestedEditAlias
+        ? a.inviteId === requestedEditAlias
+        : requestedFocusLink
+          ? a.id === requestedFocusLink
+          : false;
+
+      const bIsHighlighted = requestedEditAlias
+        ? b.inviteId === requestedEditAlias
+        : requestedFocusLink
+          ? b.id === requestedFocusLink
+          : false;
+
+      if (aIsHighlighted && !bIsHighlighted) return -1;
+      if (!aIsHighlighted && bIsHighlighted) return 1;
+
+      return 0;
+    });
 
   const activeLinkOptions: ActiveLinkOption[] = activeLinkCards.map((link) => ({
     id: link.id,
@@ -271,11 +297,30 @@ export default async function CompartirPage({
       placeholder: link.aliasPlaceholder,
     }));
 
-  const initialSelectedAliasId = activeAliasOptions.some(
-    (link) => link.id === requestedEditAlias
-  )
-    ? requestedEditAlias
+  const highlightedLink =
+    (requestedEditAlias
+      ? activeLinkCards.find((link) => link.inviteId === requestedEditAlias)
+      : null) ??
+    (requestedFocusLink
+      ? activeLinkCards.find((link) => link.id === requestedFocusLink)
+      : null) ??
+    filteredActiveLinkCards[0] ??
+    activeLinkCards[0] ??
+    null;
+
+  const initialSelectedAliasId = activeAliasOptions.some((link) => {
+    if (requestedEditAlias) {
+      return link.id === requestedEditAlias;
+    }
+
+    return highlightedLink?.inviteId ? link.id === highlightedLink.inviteId : false;
+  })
+    ? requestedEditAlias || highlightedLink?.inviteId || undefined
     : undefined;
+
+  const highlightedAgendaHref = highlightedLink
+    ? `/agenda?shared=${encodeURIComponent(highlightedLink.partnerUserId)}#agenda-compartida`
+    : "/agenda#agenda-compartida";
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
@@ -324,6 +369,124 @@ export default async function CompartirPage({
             </p>
           </div>
         </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <Link href="/agenda#mi-agenda" className={getSecondaryButtonClasses()}>
+            Ir a mi agenda
+          </Link>
+
+          <Link
+            href={highlightedAgendaHref}
+            className={getPrimaryButtonClasses()}
+          >
+            Ver agenda compartida
+          </Link>
+        </div>
+
+        {highlightedLink ? (
+          <>
+            <p className="mt-3 text-sm text-slate-500">
+              Atajo actual preparado para la agenda de{" "}
+              <span className="font-semibold text-slate-700">
+                {highlightedLink.title}
+              </span>
+              .
+            </p>
+
+            <div className="mt-4 rounded-3xl border border-sky-200 bg-sky-50 p-4">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex rounded-full border border-sky-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-sky-700">
+                      Conexión destacada
+                    </span>
+
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${
+                        highlightedLink.hasCustomAlias
+                          ? "border border-sky-200 bg-white text-sky-700"
+                          : "border border-slate-200 bg-white text-slate-600"
+                      }`}
+                    >
+                      {highlightedLink.hasCustomAlias
+                        ? "Alias activo"
+                        : "Sin alias personalizado"}
+                    </span>
+                  </div>
+
+                  <h2 className="mt-3 break-words text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                    {highlightedLink.title}
+                  </h2>
+
+                  {highlightedLink.hasCustomAlias ? (
+                    <p className="mt-1 text-sm text-slate-600">
+                      Nombre base:{" "}
+                      <span className="font-medium text-slate-800">
+                        {highlightedLink.baseName}
+                      </span>
+                    </p>
+                  ) : null}
+
+                  {highlightedLink.partnerEmail ? (
+                    <p className="mt-1 break-all text-sm text-slate-600">
+                      {highlightedLink.partnerEmail}
+                    </p>
+                  ) : null}
+
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Conectado desde {formatDate(highlightedLink.createdAt)}.
+                    Desde aquí puedes volver a esa agenda o seguir gestionando el alias.
+                  </p>
+                </div>
+
+                <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2">
+                  <Link
+                    href={highlightedAgendaHref}
+                    className={getPrimaryButtonClasses()}
+                  >
+                    Ver agenda compartida
+                  </Link>
+
+                  {highlightedLink.inviteId ? (
+                    <Link
+                      href={buildCompartirHref({
+                        q: searchQuery,
+                        editAlias: highlightedLink.inviteId,
+                        focusLink: highlightedLink.id,
+                        hash: "edit-shared-link-alias-form",
+                      })}
+                      className={getSecondaryButtonClasses()}
+                    >
+                      Editar alias
+                    </Link>
+                  ) : (
+                    <Link
+                      href={buildCompartirHref({
+                        q: searchQuery,
+                        focusLink: highlightedLink.id,
+                        hash: "deactivate-shared-link-form",
+                      })}
+                      className={getSecondaryButtonClasses()}
+                    >
+                      Gestionar conexión
+                    </Link>
+                  )}
+
+                  <Link
+                    href={buildCompartirHref({
+                      q: searchQuery,
+                      focusLink: highlightedLink.id,
+                      hash: "deactivate-shared-link-form",
+                    })}
+                    className={getSecondaryButtonClasses()}
+                  >
+                    Desactivar esta conexión
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : null}
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -359,17 +522,14 @@ export default async function CompartirPage({
                     />
 
                     <div className="grid grid-cols-1 gap-2 sm:flex">
-                      <button
-                        type="submit"
-                        className={renderActionButtonClasses("primary")}
-                      >
+                      <button type="submit" className={getPrimaryButtonClasses()}>
                         Buscar
                       </button>
 
                       {searchQuery ? (
                         <Link
                           href="/compartir"
-                          className={renderActionButtonClasses()}
+                          className={getSecondaryButtonClasses()}
                         >
                           Limpiar
                         </Link>
@@ -389,7 +549,11 @@ export default async function CompartirPage({
                   {filteredActiveLinkCards.map((link) => (
                     <article
                       key={link.id}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                      className={`rounded-2xl border p-4 ${
+                        highlightedLink?.id === link.id
+                          ? "border-sky-300 bg-sky-50 shadow-sm"
+                          : "border-slate-200 bg-slate-50"
+                      }`}
                     >
                       <div className="flex flex-col gap-4">
                         <div className="min-w-0">
@@ -397,6 +561,12 @@ export default async function CompartirPage({
                             <h3 className="break-words text-base font-semibold text-slate-900">
                               {link.title}
                             </h3>
+
+                            {highlightedLink?.id === link.id ? (
+                              <span className="inline-flex rounded-full border border-sky-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-sky-700">
+                                Conexión actual
+                              </span>
+                            ) : null}
 
                             <span
                               className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
@@ -429,6 +599,12 @@ export default async function CompartirPage({
                           <p className="mt-2 text-xs text-slate-500">
                             Conectado desde {formatDate(link.createdAt)}
                           </p>
+
+                          {highlightedLink?.id === link.id ? (
+                            <p className="mt-2 text-sm font-medium text-sky-700">
+                              Esta es la conexión que tienes ahora mismo en foco.
+                            </p>
+                          ) : null}
                         </div>
 
                         <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
@@ -437,9 +613,10 @@ export default async function CompartirPage({
                               href={buildCompartirHref({
                                 q: searchQuery,
                                 editAlias: link.inviteId,
+                                focusLink: link.id,
                                 hash: "edit-shared-link-alias-form",
                               })}
-                              className={renderActionButtonClasses()}
+                              className={getSecondaryButtonClasses()}
                             >
                               Editar alias
                             </Link>
@@ -449,7 +626,7 @@ export default async function CompartirPage({
                             href={`/agenda?shared=${encodeURIComponent(
                               link.partnerUserId
                             )}#agenda-compartida`}
-                            className={renderActionButtonClasses()}
+                            className={getPrimaryButtonClasses()}
                           >
                             Ver esta agenda
                           </Link>
@@ -482,7 +659,10 @@ export default async function CompartirPage({
           </div>
 
           <div className="mt-6 min-w-0">
-            <DeactivateSharedLinkForm links={activeLinkOptions} />
+            <DeactivateSharedLinkForm
+              links={activeLinkOptions}
+              initialSelectedLinkId={highlightedLink?.id ?? undefined}
+            />
           </div>
         </section>
 
@@ -527,7 +707,7 @@ export default async function CompartirPage({
                         <input type="hidden" name="action" value="accept" />
                         <button
                           type="submit"
-                          className={renderActionButtonClasses("primary")}
+                          className={getPrimaryButtonClasses()}
                         >
                           Aceptar
                         </button>
@@ -541,7 +721,7 @@ export default async function CompartirPage({
                         <input type="hidden" name="action" value="reject" />
                         <button
                           type="submit"
-                          className={renderActionButtonClasses()}
+                          className={getSecondaryButtonClasses()}
                         >
                           Rechazar
                         </button>
@@ -596,7 +776,7 @@ export default async function CompartirPage({
                       <input type="hidden" name="action" value="cancel" />
                       <button
                         type="submit"
-                        className={renderActionButtonClasses()}
+                        className={getSecondaryButtonClasses()}
                       >
                         Cancelar invitación
                       </button>

@@ -1660,19 +1660,29 @@ function getSharedAgendaLabel(params: {
   };
 }
 
-function buildSharedConnectionLinks(inviteId: string | null) {
+function buildSharedConnectionLinks(params: {
+  inviteId: string | null;
+  linkId: string;
+}) {
+  const { inviteId, linkId } = params;
+
   if (!inviteId) {
     return {
       editAliasHref: null,
-      manageConnectionHref: "/compartir",
+      manageConnectionHref: `/compartir?focusLink=${encodeURIComponent(linkId)}`,
     };
   }
 
+  const search = new URLSearchParams({
+    editAlias: inviteId,
+    focusLink: linkId,
+  });
+
   return {
-    editAliasHref: `/compartir?editAlias=${encodeURIComponent(
-      inviteId
-    )}#edit-shared-link-alias-form`,
-    manageConnectionHref: "/compartir#edit-shared-link-alias-form",
+    editAliasHref: `/compartir?${search.toString()}#edit-shared-link-alias-form`,
+    manageConnectionHref: `/compartir?focusLink=${encodeURIComponent(
+      linkId
+    )}#deactivate-shared-link-form`,
   };
 }
 
@@ -2117,7 +2127,10 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
       currentUserEmail: normalizedUserEmail,
     });
 
-    const connectionLinks = buildSharedConnectionLinks(invite?.id ?? null);
+    const connectionLinks = buildSharedConnectionLinks({
+      inviteId: invite?.id ?? null,
+      linkId: link.id,
+    });
 
     return {
       userId: sharedInfo.userId,

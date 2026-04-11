@@ -49,6 +49,11 @@ export default function EditSharedLinkAliasForm({
     return links.find((link) => link.id === selectedLinkId) ?? null;
   }, [links, selectedLinkId]);
 
+  const hasFocusedLink = Boolean(
+    initialSelectedLinkId &&
+      links.some((link) => link.id === initialSelectedLinkId)
+  );
+
   useEffect(() => {
     if (!links.length) {
       setSelectedLinkId("");
@@ -149,17 +154,55 @@ export default function EditSharedLinkAliasForm({
     <form
       id="edit-shared-link-alias-form"
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+      className={`rounded-2xl border bg-white p-4 shadow-sm transition ${
+        hasFocusedLink
+          ? "border-sky-300 ring-2 ring-sky-100"
+          : "border-slate-200"
+      }`}
     >
       <div className="space-y-1">
-        <h3 className="text-base font-semibold text-slate-900">
-          Cambiar nombre de una conexión
-        </h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-base font-semibold text-slate-900">
+            Cambiar nombre de una conexión
+          </h3>
+
+          {hasFocusedLink ? (
+            <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700">
+              Conexión en foco
+            </span>
+          ) : null}
+        </div>
+
         <p className="text-sm leading-6 text-slate-600">
           Pon un nombre corto para reconocer mejor la agenda del otro
           profesional.
         </p>
       </div>
+
+      {selectedLink ? (
+        <div
+          className={`mt-4 rounded-2xl px-4 py-3 ${
+            hasFocusedLink
+              ? "border border-sky-200 bg-sky-50"
+              : "border border-slate-200 bg-slate-50"
+          }`}
+        >
+          <p
+            className={`text-xs font-semibold uppercase tracking-wide ${
+              hasFocusedLink ? "text-sky-700" : "text-slate-500"
+            }`}
+          >
+            {hasFocusedLink ? "Conexión enfocada" : "Conexión seleccionada"}
+          </p>
+          <p className="mt-1 break-words text-base font-semibold text-slate-900">
+            {selectedLink.label}
+          </p>
+          <p className="mt-1 text-sm leading-6 text-slate-600">
+            Vas a guardar un nombre visible solo para ti, para reconocer mejor
+            esta agenda compartida.
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
@@ -195,21 +238,6 @@ export default function EditSharedLinkAliasForm({
         </select>
       </div>
 
-      {selectedLink ? (
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Conexión seleccionada
-          </p>
-          <p className="mt-1 break-words text-base font-semibold text-slate-900">
-            {selectedLink.label}
-          </p>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
-            Vas a guardar un nombre visible solo para ti, para reconocer mejor
-            esta agenda compartida.
-          </p>
-        </div>
-      ) : null}
-
       <div className="mt-4 space-y-2">
         <div className="flex items-center justify-between gap-3">
           <label
@@ -219,9 +247,7 @@ export default function EditSharedLinkAliasForm({
             Nombre o alias
           </label>
 
-          <span className="text-xs text-slate-500">
-            {aliasValue.length}/80
-          </span>
+          <span className="text-xs text-slate-500">{aliasValue.length}/80</span>
         </div>
 
         <input

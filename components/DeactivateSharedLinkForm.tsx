@@ -10,6 +10,7 @@ export type ActiveLinkOption = {
 
 type DeactivateSharedLinkFormProps = {
   links: ActiveLinkOption[];
+  initialSelectedLinkId?: string;
 };
 
 function getFriendlyErrorMessage(message: string) {
@@ -28,9 +29,12 @@ function getFriendlyErrorMessage(message: string) {
 
 export default function DeactivateSharedLinkForm({
   links,
+  initialSelectedLinkId,
 }: DeactivateSharedLinkFormProps) {
   const [selectedLinkId, setSelectedLinkId] = useState<string>(
-    links[0]?.id ?? ""
+    initialSelectedLinkId && links.some((link) => link.id === initialSelectedLinkId)
+      ? initialSelectedLinkId
+      : links[0]?.id ?? ""
   );
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -40,9 +44,22 @@ export default function DeactivateSharedLinkForm({
     return links.find((link) => link.id === selectedLinkId) ?? null;
   }, [links, selectedLinkId]);
 
+  const hasFocusedLink = Boolean(
+    initialSelectedLinkId &&
+      links.some((link) => link.id === initialSelectedLinkId)
+  );
+
   useEffect(() => {
     if (!links.length) {
       setSelectedLinkId("");
+      return;
+    }
+
+    if (
+      initialSelectedLinkId &&
+      links.some((link) => link.id === initialSelectedLinkId)
+    ) {
+      setSelectedLinkId(initialSelectedLinkId);
       return;
     }
 
@@ -53,7 +70,7 @@ export default function DeactivateSharedLinkForm({
 
       return links[0]?.id ?? "";
     });
-  }, [links]);
+  }, [initialSelectedLinkId, links]);
 
   useEffect(() => {
     setErrorMessage("");
@@ -119,13 +136,27 @@ export default function DeactivateSharedLinkForm({
 
   return (
     <form
+      id="deactivate-shared-link-form"
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+      className={`rounded-2xl border bg-white p-4 shadow-sm transition ${
+        hasFocusedLink
+          ? "border-amber-300 ring-2 ring-amber-100"
+          : "border-slate-200"
+      }`}
     >
       <div className="space-y-1">
-        <h3 className="text-base font-semibold text-slate-900">
-          Desactivar conexión
-        </h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-base font-semibold text-slate-900">
+            Desactivar conexión
+          </h3>
+
+          {hasFocusedLink ? (
+            <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800">
+              Conexión en foco
+            </span>
+          ) : null}
+        </div>
+
         <p className="text-sm leading-6 text-slate-600">
           Puedes dejar de compartir en cualquier momento. Más adelante podrás
           volver a conectar si lo necesitas.
@@ -141,6 +172,31 @@ export default function DeactivateSharedLinkForm({
           que volváis a conectar.
         </p>
       </div>
+
+      {selectedLink ? (
+        <div
+          className={`mt-4 rounded-2xl px-4 py-3 ${
+            hasFocusedLink
+              ? "border border-amber-200 bg-amber-50"
+              : "border border-slate-200 bg-slate-50"
+          }`}
+        >
+          <p
+            className={`text-xs font-semibold uppercase tracking-wide ${
+              hasFocusedLink ? "text-amber-800" : "text-slate-500"
+            }`}
+          >
+            {hasFocusedLink ? "Conexión enfocada" : "Conexión seleccionada"}
+          </p>
+          <p className="mt-1 break-words text-base font-semibold text-slate-900">
+            {selectedLink.label}
+          </p>
+          <p className="mt-1 text-sm leading-6 text-slate-600">
+            {selectedLink.aliasPlaceholder ??
+              "Esta conexión dejará de estar compartida."}
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-4 space-y-2">
         <label
@@ -165,21 +221,6 @@ export default function DeactivateSharedLinkForm({
           ))}
         </select>
       </div>
-
-      {selectedLink ? (
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Conexión seleccionada
-          </p>
-          <p className="mt-1 break-words text-base font-semibold text-slate-900">
-            {selectedLink.label}
-          </p>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
-            {selectedLink.aliasPlaceholder ??
-              "Esta conexión dejará de estar compartida."}
-          </p>
-        </div>
-      ) : null}
 
       {errorMessage ? (
         <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
