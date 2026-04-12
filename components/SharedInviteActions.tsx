@@ -72,13 +72,15 @@ export default function SharedInviteActions({
     }
   }
 
+  const isBusy = Boolean(submittingAction) || isRefreshing;
+
   if (variant === "outgoing") {
     return (
       <div className="mt-4">
         <button
           type="button"
           onClick={() => submitAction("cancel")}
-          disabled={Boolean(submittingAction) || isRefreshing}
+          disabled={isBusy}
           className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
           {submittingAction === "cancel"
@@ -103,7 +105,7 @@ export default function SharedInviteActions({
         <button
           type="button"
           onClick={() => submitAction("accept")}
-          disabled={Boolean(submittingAction) || isRefreshing}
+          disabled={isBusy}
           className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
           {submittingAction === "accept"
@@ -116,7 +118,7 @@ export default function SharedInviteActions({
         <button
           type="button"
           onClick={() => submitAction("reject")}
-          disabled={Boolean(submittingAction) || isRefreshing}
+          disabled={isBusy}
           className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
           {submittingAction === "reject"

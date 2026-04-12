@@ -16,7 +16,6 @@ type NoticeState = {
 } | null;
 
 type InvitePayloadRow = {
-  id?: string;
   inviter_user_id?: string | null;
   inviter_email?: string | null;
   invitee_email?: string | null;
@@ -24,7 +23,6 @@ type InvitePayloadRow = {
 };
 
 type LinkPayloadRow = {
-  id?: string;
   user_a_id?: string | null;
   user_b_id?: string | null;
   is_active?: boolean | null;
@@ -36,14 +34,14 @@ function normalizeEmail(value: string | null | undefined) {
 
 function getNoticeClasses(tone: NoticeTone) {
   if (tone === "emerald") {
-    return "border-emerald-200/90 bg-white/95";
+    return "border-emerald-200 bg-emerald-50/95";
   }
 
   if (tone === "amber") {
-    return "border-amber-200/90 bg-white/95";
+    return "border-amber-200 bg-amber-50/95";
   }
 
-  return "border-sky-200/90 bg-white/95";
+  return "border-sky-200 bg-sky-50/95";
 }
 
 function getDotClasses(tone: NoticeTone) {
@@ -56,24 +54,6 @@ function getDotClasses(tone: NoticeTone) {
   }
 
   return "bg-sky-500";
-}
-
-function getPillClasses(tone: NoticeTone) {
-  if (tone === "emerald") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  }
-
-  if (tone === "amber") {
-    return "border-amber-200 bg-amber-50 text-amber-700";
-  }
-
-  return "border-sky-200 bg-sky-50 text-sky-700";
-}
-
-function getPillLabel(tone: NoticeTone) {
-  if (tone === "emerald") return "Correcto";
-  if (tone === "amber") return "Atención";
-  return "Nuevo";
 }
 
 export default function SharedInvitesRealtimeNotice({
@@ -124,7 +104,7 @@ export default function SharedInvitesRealtimeNotice({
 
         noticeTimeoutRef.current = setTimeout(() => {
           setNotice(null);
-        }, 5000);
+        }, 4200);
       }
 
       const channel = supabase.channel(
@@ -147,7 +127,7 @@ export default function SharedInvitesRealtimeNotice({
           if (inviteeEmail === currentUserEmail && status === "pending") {
             showNotice(
               inviterEmail
-                ? `Nueva invitación recibida de ${inviterEmail}.`
+                ? `Nueva invitación de ${inviterEmail}.`
                 : "Nueva invitación recibida.",
               "sky"
             );
@@ -156,12 +136,6 @@ export default function SharedInvitesRealtimeNotice({
           }
 
           if (inviterEmail === currentUserEmail) {
-            showNotice(
-              inviteeEmail
-                ? `Invitación enviada a ${inviteeEmail}.`
-                : "Invitación enviada correctamente.",
-              "sky"
-            );
             scheduleRefresh();
           }
         }
@@ -196,13 +170,10 @@ export default function SharedInvitesRealtimeNotice({
             prevStatus === "pending" &&
             nextStatus === "accepted"
           ) {
-            const otherLabel =
-              nextInviteeEmail && nextInviteeEmail !== currentUserEmail
-                ? nextInviteeEmail
-                : "el otro profesional";
-
             showNotice(
-              `${otherLabel} ha aceptado la invitación. Ya podéis veros las agendas.`,
+              nextInviteeEmail && nextInviteeEmail !== currentUserEmail
+                ? `${nextInviteeEmail} aceptó tu invitación.`
+                : "Invitación aceptada.",
               "emerald"
             );
             return;
@@ -213,12 +184,12 @@ export default function SharedInvitesRealtimeNotice({
             prevStatus === "pending" &&
             nextStatus === "rejected"
           ) {
-            const otherLabel =
+            showNotice(
               nextInviteeEmail && nextInviteeEmail !== currentUserEmail
-                ? nextInviteeEmail
-                : "el otro profesional";
-
-            showNotice(`${otherLabel} ha rechazado la invitación.`, "amber");
+                ? `${nextInviteeEmail} rechazó tu invitación.`
+                : "Invitación rechazada.",
+              "amber"
+            );
             return;
           }
 
@@ -227,7 +198,7 @@ export default function SharedInvitesRealtimeNotice({
             prevStatus === "pending" &&
             nextStatus === "cancelled"
           ) {
-            showNotice("La invitación recibida ha sido cancelada.", "amber");
+            showNotice("La invitación fue cancelada.", "amber");
           }
         }
       );
@@ -249,7 +220,6 @@ export default function SharedInvitesRealtimeNotice({
           if (!affectsCurrentUser) return;
 
           scheduleRefresh();
-          showNotice("Ya hay una conexión activa entre ambas agendas.", "emerald");
         }
       );
 
@@ -275,10 +245,7 @@ export default function SharedInvitesRealtimeNotice({
           scheduleRefresh();
 
           if (prevLink.is_active === true && nextLink.is_active === false) {
-            showNotice(
-              "La conexión compartida se ha desactivado. Ya no podéis veros las agendas.",
-              "amber"
-            );
+            showNotice("La conexión compartida se ha desactivado.", "amber");
           }
         }
       );
@@ -312,43 +279,30 @@ export default function SharedInvitesRealtimeNotice({
   if (!notice) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-3 bottom-3 z-[100] sm:inset-x-auto sm:right-4 sm:w-[380px]">
+    <div className="pointer-events-none fixed inset-x-3 bottom-3 z-[100] sm:inset-x-auto sm:right-4 sm:w-full sm:max-w-sm">
       <div
-        className={`pointer-events-auto rounded-[2rem] border p-4 shadow-[0_24px_70px_rgba(15,23,42,0.20)] backdrop-blur-xl ${getNoticeClasses(
+        role="status"
+        aria-live="polite"
+        className={`pointer-events-auto rounded-2xl border px-4 py-3 shadow-[0_18px_50px_rgba(15,23,42,0.16)] backdrop-blur-xl ${getNoticeClasses(
           notice.tone
         )}`}
       >
         <div className="flex items-start gap-3">
-          <div className="flex shrink-0 flex-col items-center pt-1">
-            <div
-              className={`h-3 w-3 rounded-full shadow-sm ${getDotClasses(
-                notice.tone
-              )}`}
-            />
-            <div className="mt-2 h-full w-px bg-slate-200" />
-          </div>
+          <span
+            className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${getDotClasses(
+              notice.tone
+            )}`}
+            aria-hidden="true"
+          />
 
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm font-bold text-slate-900">Aviso en tiempo real</p>
-              <span
-                className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getPillClasses(
-                  notice.tone
-                )}`}
-              >
-                {getPillLabel(notice.tone)}
-              </span>
-            </div>
-
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              {notice.message}
-            </p>
-          </div>
+          <p className="min-w-0 flex-1 text-sm font-medium leading-6 text-slate-800">
+            {notice.message}
+          </p>
 
           <button
             type="button"
             onClick={() => setNotice(null)}
-            className="pointer-events-auto inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+            className="pointer-events-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/80 bg-white/90 text-sm font-semibold text-slate-500 transition hover:bg-white"
             aria-label="Cerrar aviso"
           >
             ×

@@ -5,7 +5,6 @@ import EditSharedLinkAliasForm from "@/components/EditSharedLinkAliasForm";
 import InviteSharedAgendaForm from "@/components/InviteSharedAgendaForm";
 import SharedInviteActions from "@/components/SharedInviteActions";
 import SharedInvitesLiveStrip from "@/components/SharedInvitesLiveStrip";
-import SharedInvitesRealtimeNotice from "@/components/SharedInvitesRealtimeNotice";
 import DeactivateSharedLinkForm, {
   type ActiveLinkOption,
 } from "@/components/DeactivateSharedLinkForm";
@@ -135,6 +134,18 @@ function getSecondaryButtonClasses() {
 
 function getPrimaryButtonClasses() {
   return "inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto";
+}
+
+function getStatCardClasses() {
+  return "rounded-2xl border border-slate-200 bg-slate-50 p-4";
+}
+
+function getEmptyState(message: string) {
+  return (
+    <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
+      <p className="text-sm text-slate-600">{message}</p>
+    </div>
+  );
 }
 
 export default async function CompartirPage({
@@ -328,27 +339,23 @@ export default async function CompartirPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
-      <SharedInvitesRealtimeNotice userEmail={currentUserEmail} />
-
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="max-w-3xl">
           <span className="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-700">
             Compartir agenda
           </span>
 
           <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Comparte tu agenda con otros profesionales
+            Conecta tu agenda con otros profesionales
           </h1>
 
           <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
-            Aquí puedes invitar a otro profesional para que vea tu agenda y tú la
-            suya en modo solo lectura. La conexión se puede desactivar cuando
-            quieras.
+            Invita, consulta en solo lectura y desactiva la conexión cuando quieras.
           </p>
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className={getStatCardClasses()}>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Conexiones activas
             </p>
@@ -357,18 +364,18 @@ export default async function CompartirPage({
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className={getStatCardClasses()}>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Invitaciones recibidas
+              Recibidas
             </p>
             <p className="mt-2 text-2xl font-bold text-slate-900">
               {incomingPendingInvites.length}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className={getStatCardClasses()}>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Invitaciones enviadas
+              Enviadas
             </p>
             <p className="mt-2 text-2xl font-bold text-slate-900">
               {outgoingPendingInvites.length}
@@ -376,7 +383,7 @@ export default async function CompartirPage({
           </div>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Link href="/agenda#mi-agenda" className={getSecondaryButtonClasses()}>
             Ir a mi agenda
           </Link>
@@ -385,310 +392,253 @@ export default async function CompartirPage({
             href={highlightedAgendaHref}
             className={getPrimaryButtonClasses()}
           >
-            Ver agenda compartida
+            Ver compartida
           </Link>
         </div>
 
         {highlightedLink ? (
-          <>
-            <p className="mt-3 text-sm text-slate-500">
-              Atajo actual preparado para la agenda de{" "}
-              <span className="font-semibold text-slate-700">
-                {highlightedLink.title}
-              </span>
-              .
-            </p>
+          <div className="mt-6 rounded-3xl border border-sky-200 bg-sky-50 p-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
+                <span className="inline-flex rounded-full border border-sky-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-sky-700">
+                  Conexión activa
+                </span>
 
-            <div className="mt-4 rounded-3xl border border-sky-200 bg-sky-50 p-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex rounded-full border border-sky-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-sky-700">
-                      Conexión destacada
-                    </span>
+                <h2 className="mt-3 break-words text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                  {highlightedLink.title}
+                </h2>
 
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${
-                        highlightedLink.hasCustomAlias
-                          ? "border border-sky-200 bg-white text-sky-700"
-                          : "border border-slate-200 bg-white text-slate-600"
-                      }`}
-                    >
-                      {highlightedLink.hasCustomAlias
-                        ? "Alias activo"
-                        : "Sin alias personalizado"}
-                    </span>
-                  </div>
-
-                  <h2 className="mt-3 break-words text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                    {highlightedLink.title}
-                  </h2>
-
-                  {highlightedLink.hasCustomAlias ? (
-                    <p className="mt-1 text-sm text-slate-600">
-                      Nombre base:{" "}
-                      <span className="font-medium text-slate-800">
-                        {highlightedLink.baseName}
-                      </span>
-                    </p>
-                  ) : null}
-
-                  {highlightedLink.partnerEmail ? (
-                    <p className="mt-1 break-all text-sm text-slate-600">
-                      {highlightedLink.partnerEmail}
-                    </p>
-                  ) : null}
-
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Conectado desde {formatDate(highlightedLink.createdAt)}.
-                    Desde aquí puedes volver a esa agenda o seguir gestionando el alias.
+                {highlightedLink.hasCustomAlias ? (
+                  <p className="mt-1 text-sm text-slate-600">
+                    Nombre base: <span className="font-medium text-slate-800">{highlightedLink.baseName}</span>
                   </p>
-                </div>
+                ) : null}
 
-                <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2">
-                  <Link
-                    href={highlightedAgendaHref}
-                    className={getPrimaryButtonClasses()}
-                  >
-                    Ver agenda compartida
-                  </Link>
+                {highlightedLink.partnerEmail ? (
+                  <p className="mt-1 break-all text-sm text-slate-600">
+                    {highlightedLink.partnerEmail}
+                  </p>
+                ) : null}
 
-                  {highlightedLink.inviteId ? (
-                    <Link
-                      href={buildCompartirHref({
-                        q: searchQuery,
-                        editAlias: highlightedLink.inviteId,
-                        focusLink: highlightedLink.id,
-                        hash: "edit-shared-link-alias-form",
-                      })}
-                      className={getSecondaryButtonClasses()}
-                    >
-                      Editar alias
-                    </Link>
-                  ) : (
-                    <Link
-                      href={buildCompartirHref({
-                        q: searchQuery,
-                        focusLink: highlightedLink.id,
-                        hash: "deactivate-shared-link-form",
-                      })}
-                      className={getSecondaryButtonClasses()}
-                    >
-                      Gestionar conexión
-                    </Link>
-                  )}
+                <p className="mt-2 text-sm text-slate-600">
+                  Desde {formatDate(highlightedLink.createdAt)}
+                </p>
+              </div>
 
+              <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2">
+                <Link
+                  href={highlightedAgendaHref}
+                  className={getPrimaryButtonClasses()}
+                >
+                  Abrir agenda
+                </Link>
+
+                {highlightedLink.inviteId ? (
                   <Link
                     href={buildCompartirHref({
                       q: searchQuery,
+                      editAlias: highlightedLink.inviteId,
                       focusLink: highlightedLink.id,
-                      hash: "deactivate-shared-link-form",
+                      hash: "edit-shared-link-alias-form",
                     })}
                     className={getSecondaryButtonClasses()}
                   >
-                    Desactivar esta conexión
+                    Cambiar alias
                   </Link>
-                </div>
+                ) : null}
+
+                <Link
+                  href={buildCompartirHref({
+                    q: searchQuery,
+                    focusLink: highlightedLink.id,
+                    hash: "deactivate-shared-link-form",
+                  })}
+                  className={getSecondaryButtonClasses()}
+                >
+                  Desactivar
+                </Link>
               </div>
             </div>
-          </>
+          </div>
         ) : null}
-      </div>
+      </section>
 
       <div className="mt-6">
         <SharedInvitesLiveStrip userEmail={currentUserEmail} />
       </div>
 
-      <div className="mt-6">
-        <InviteSharedAgendaForm />
-      </div>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-6">
+          <InviteSharedAgendaForm />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Conexiones activas
-            </h2>
-            <p className="text-sm text-slate-600">
-              Estas son las agendas que ahora mismo tienes conectadas.
-            </p>
-          </div>
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">
+                  Conexiones activas
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Busca, entra o cambia el alias.
+                </p>
+              </div>
 
-          {activeLinkCards.length ? (
-            <>
-              <form method="get" className="mt-5">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="connections-search"
-                    className="block text-sm font-medium text-slate-700"
-                  >
-                    Buscar conexión
-                  </label>
+              <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                {activeLinkCards.length}
+              </span>
+            </div>
 
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <input
-                      id="connections-search"
-                      type="text"
-                      name="q"
-                      defaultValue={searchQuery}
-                      placeholder="Busca por alias, nombre o email"
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-                    />
-
-                    <div className="grid grid-cols-1 gap-2 sm:flex">
-                      <button type="submit" className={getPrimaryButtonClasses()}>
-                        Buscar
-                      </button>
-
-                      {searchQuery ? (
-                        <Link
-                          href="/compartir"
-                          className={getSecondaryButtonClasses()}
-                        >
-                          Limpiar
-                        </Link>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-500">
-                    Mostrando {filteredActiveLinkCards.length} de{" "}
-                    {activeLinkCards.length} conexiones activas.
-                  </p>
-                </div>
-              </form>
-
-              {filteredActiveLinkCards.length ? (
-                <div className="mt-5 space-y-4">
-                  {filteredActiveLinkCards.map((link) => (
-                    <article
-                      key={link.id}
-                      className={`rounded-2xl border p-4 ${
-                        highlightedLink?.id === link.id
-                          ? "border-sky-300 bg-sky-50 shadow-sm"
-                          : "border-slate-200 bg-slate-50"
-                      }`}
+            {activeLinkCards.length ? (
+              <>
+                <form method="get" className="mt-5">
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="connections-search"
+                      className="block text-sm font-medium text-slate-700"
                     >
-                      <div className="flex flex-col gap-4">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="break-words text-base font-semibold text-slate-900">
-                              {link.title}
-                            </h3>
+                      Buscar
+                    </label>
 
-                            {highlightedLink?.id === link.id ? (
-                              <span className="inline-flex rounded-full border border-sky-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-sky-700">
-                                Conexión actual
-                              </span>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        id="connections-search"
+                        type="text"
+                        name="q"
+                        defaultValue={searchQuery}
+                        placeholder="Alias, nombre o email"
+                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                      />
+
+                      <div className="grid grid-cols-1 gap-2 sm:flex">
+                        <button type="submit" className={getPrimaryButtonClasses()}>
+                          Buscar
+                        </button>
+
+                        {searchQuery ? (
+                          <Link
+                            href="/compartir"
+                            className={getSecondaryButtonClasses()}
+                          >
+                            Limpiar
+                          </Link>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-500">
+                      {filteredActiveLinkCards.length} de {activeLinkCards.length} visibles
+                    </p>
+                  </div>
+                </form>
+
+                {filteredActiveLinkCards.length ? (
+                  <div className="mt-5 space-y-4">
+                    {filteredActiveLinkCards.map((link) => (
+                      <article
+                        key={link.id}
+                        className={`rounded-2xl border p-4 ${
+                          highlightedLink?.id === link.id
+                            ? "border-sky-300 bg-sky-50 shadow-sm"
+                            : "border-slate-200 bg-slate-50"
+                        }`}
+                      >
+                        <div className="flex flex-col gap-4">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="break-words text-base font-semibold text-slate-900">
+                                {link.title}
+                              </h3>
+
+                              {link.hasCustomAlias ? (
+                                <span className="inline-flex rounded-full border border-sky-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-sky-700">
+                                  Alias
+                                </span>
+                              ) : null}
+                            </div>
+
+                            {link.hasCustomAlias ? (
+                              <p className="mt-1 text-sm text-slate-600">
+                                {link.baseName}
+                              </p>
                             ) : null}
 
-                            <span
-                              className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                                link.hasCustomAlias
-                                  ? "border border-sky-200 bg-sky-50 text-sky-700"
-                                  : "border border-slate-200 bg-white text-slate-600"
-                              }`}
-                            >
-                              {link.hasCustomAlias
-                                ? "Alias personalizado"
-                                : "Sin alias"}
-                            </span>
+                            {link.partnerEmail ? (
+                              <p className="mt-1 break-all text-sm text-slate-600">
+                                {link.partnerEmail}
+                              </p>
+                            ) : null}
+
+                            <p className="mt-2 text-xs text-slate-500">
+                              Desde {formatDate(link.createdAt)}
+                            </p>
                           </div>
 
-                          {link.hasCustomAlias ? (
-                            <p className="mt-1 text-sm text-slate-600">
-                              Nombre base:{" "}
-                              <span className="font-medium text-slate-800">
-                                {link.baseName}
-                              </span>
-                            </p>
-                          ) : null}
-
-                          {link.partnerEmail ? (
-                            <p className="mt-1 break-all text-sm text-slate-600">
-                              {link.partnerEmail}
-                            </p>
-                          ) : null}
-
-                          <p className="mt-2 text-xs text-slate-500">
-                            Conectado desde {formatDate(link.createdAt)}
-                          </p>
-
-                          {highlightedLink?.id === link.id ? (
-                            <p className="mt-2 text-sm font-medium text-sky-700">
-                              Esta es la conexión que tienes ahora mismo en foco.
-                            </p>
-                          ) : null}
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
-                          {link.inviteId ? (
+                          <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
                             <Link
-                              href={buildCompartirHref({
-                                q: searchQuery,
-                                editAlias: link.inviteId,
-                                focusLink: link.id,
-                                hash: "edit-shared-link-alias-form",
-                              })}
-                              className={getSecondaryButtonClasses()}
+                              href={`/agenda?shared=${encodeURIComponent(
+                                link.partnerUserId
+                              )}#agenda-compartida`}
+                              className={getPrimaryButtonClasses()}
                             >
-                              Editar alias
+                              Ver agenda
                             </Link>
-                          ) : null}
 
-                          <Link
-                            href={`/agenda?shared=${encodeURIComponent(
-                              link.partnerUserId
-                            )}#agenda-compartida`}
-                            className={getPrimaryButtonClasses()}
-                          >
-                            Ver esta agenda
-                          </Link>
+                            {link.inviteId ? (
+                              <Link
+                                href={buildCompartirHref({
+                                  q: searchQuery,
+                                  editAlias: link.inviteId,
+                                  focusLink: link.id,
+                                  hash: "edit-shared-link-alias-form",
+                                })}
+                                className={getSecondaryButtonClasses()}
+                              >
+                                Editar alias
+                              </Link>
+                            ) : null}
+                          </div>
                         </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
-                  <p className="text-sm text-slate-600">
-                    No se ha encontrado ninguna conexión con ese texto.
-                  </p>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
-              <p className="text-sm text-slate-600">
-                Todavía no tienes ninguna conexión activa.
-              </p>
-            </div>
-          )}
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  getEmptyState("No hay conexiones que coincidan con la búsqueda.")
+                )}
+              </>
+            ) : (
+              getEmptyState("Todavía no tienes conexiones activas.")
+            )}
+          </section>
 
-          <div className="mt-6 min-w-0">
+          <div className="min-w-0">
             <EditSharedLinkAliasForm
               links={activeAliasOptions}
               initialSelectedLinkId={initialSelectedAliasId}
             />
           </div>
 
-          <div className="mt-6 min-w-0">
+          <div className="min-w-0">
             <DeactivateSharedLinkForm
               links={activeLinkOptions}
               initialSelectedLinkId={highlightedLink?.id ?? undefined}
             />
           </div>
-        </section>
+        </div>
 
         <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-slate-900">
-                Invitaciones recibidas
-              </h2>
-              <p className="text-sm text-slate-600">
-                Si aceptas, ambos podréis ver la agenda del otro en modo lectura.
-              </p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">
+                  Invitaciones recibidas
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Acepta o rechaza.
+                </p>
+              </div>
+
+              <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                {incomingPendingInvites.length}
+              </span>
             </div>
 
             {incomingPendingInvites.length ? (
@@ -709,7 +659,7 @@ export default async function CompartirPage({
                     ) : null}
 
                     <p className="mt-2 text-xs text-slate-500">
-                      Recibida el {formatDate(invite.created_at)}
+                      {formatDate(invite.created_at)}
                     </p>
 
                     <SharedInviteActions
@@ -720,22 +670,24 @@ export default async function CompartirPage({
                 ))}
               </div>
             ) : (
-              <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
-                <p className="text-sm text-slate-600">
-                  No tienes invitaciones pendientes de aceptar.
-                </p>
-              </div>
+              getEmptyState("No tienes invitaciones pendientes.")
             )}
           </section>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-slate-900">
-                Invitaciones enviadas
-              </h2>
-              <p className="text-sm text-slate-600">
-                Estas son las invitaciones que todavía están esperando respuesta.
-              </p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">
+                  Invitaciones enviadas
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Pendientes de respuesta.
+                </p>
+              </div>
+
+              <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                {outgoingPendingInvites.length}
+              </span>
             </div>
 
             {outgoingPendingInvites.length ? (
@@ -754,7 +706,7 @@ export default async function CompartirPage({
                     </p>
 
                     <p className="mt-2 text-xs text-slate-500">
-                      Enviada el {formatDate(invite.created_at)}
+                      {formatDate(invite.created_at)}
                     </p>
 
                     <SharedInviteActions
@@ -765,11 +717,7 @@ export default async function CompartirPage({
                 ))}
               </div>
             ) : (
-              <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
-                <p className="text-sm text-slate-600">
-                  No tienes invitaciones enviadas pendientes.
-                </p>
-              </div>
+              getEmptyState("No tienes invitaciones enviadas pendientes.")
             )}
           </section>
         </div>

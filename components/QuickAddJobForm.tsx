@@ -190,7 +190,6 @@ export default function QuickAddJobForm() {
 
   const trimmedClientName = clientName.trim();
   const selectedDurationMinutes = Number(durationMinutes);
-  const selectedDateLabel = workDate ? formatLongDate(workDate) : "";
   const cameFromGapSuggestion = Boolean(
     queryQuick === "1" && queryDate && queryTime && queryDuration
   );
@@ -429,7 +428,7 @@ export default function QuickAddJobForm() {
       setStartTime("");
       setDurationMinutes("60");
       setNotes("");
-      setSuccess("Trabajo guardado correctamente como Comprometido.");
+      setSuccess("Trabajo guardado como Comprometido.");
 
       const params = new URLSearchParams(searchParams.toString());
       params.set("week", savedWorkDate);
@@ -486,10 +485,10 @@ export default function QuickAddJobForm() {
               Alta rápida
             </p>
             <h2 className="mt-1.5 text-lg font-bold tracking-tight text-slate-900 sm:text-2xl">
-              Añadir trabajo a tu agenda
+              Nuevo trabajo
             </h2>
             <p className="mt-1.5 text-sm leading-6 text-slate-600 sm:text-base">
-              Al guardar, el trabajo quedará directamente como Comprometido.
+              Se guarda como Comprometido.
             </p>
           </div>
 
@@ -504,31 +503,20 @@ export default function QuickAddJobForm() {
           ) : null}
         </div>
 
-        {cameFromGapSuggestion ? (
-          <div className="mt-5 rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-4 shadow-sm">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-800">
-                  Hueco elegido
-                </p>
-                <p className="mt-1.5 text-sm leading-6 text-emerald-700 sm:text-base">
-                  {formatLongDate(queryDate)} · {queryTime} ·{" "}
-                  {formatDurationLabel(Number(queryDuration))}
-                </p>
-              </div>
-
-              <span className="inline-flex w-fit items-center rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm">
-                Preparado desde la agenda
+        {cameFromGapSuggestion || queryShared ? (
+          <div className="mt-5 flex flex-wrap gap-2">
+            {cameFromGapSuggestion ? (
+              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-800">
+                {formatLongDate(queryDate)} · {queryTime} ·{" "}
+                {formatDurationLabel(Number(queryDuration))}
               </span>
-            </div>
-          </div>
-        ) : null}
+            ) : null}
 
-        {queryShared ? (
-          <div className="mt-4 rounded-3xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm leading-6 text-sky-700 shadow-sm">
-            Estás viendo una agenda compartida en solo lectura, pero este
-            formulario <span className="font-semibold">siempre guarda</span> el
-            trabajo en <span className="font-semibold">tu propia agenda</span>.
+            {queryShared ? (
+              <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-800">
+                Se guardará en tu agenda
+              </span>
+            ) : null}
           </div>
         ) : null}
 
@@ -670,20 +658,17 @@ export default function QuickAddJobForm() {
           </div>
 
           <p className="-mt-1 text-xs font-medium leading-5 text-slate-500">
-            Puedes programar trabajos hasta el {formatShortDate(agendaMaxDate)}.
+            Hasta el {formatShortDate(agendaMaxDate)}.
           </p>
 
           <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-slate-50 to-white px-4 py-4">
             {isSundaySelected ? (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-700">
-                <span className="font-semibold">
-                  Domingo marcado como descanso.
-                </span>{" "}
-                No se ofrecen horas libres automáticas para ese día.
+                Domingo de descanso. No se ofrecen horas automáticas.
               </div>
             ) : loadingAvailability ? (
               <div className="text-sm leading-6 text-slate-700">
-                Cargando horas libres para{" "}
+                Buscando horas para{" "}
                 <span className="font-semibold">
                   {formatDurationLabel(selectedDurationMinutes)}
                 </span>
@@ -695,47 +680,25 @@ export default function QuickAddJobForm() {
               </div>
             ) : noSlotsAvailable ? (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-700">
-                No hay huecos disponibles para{" "}
+                No hay huecos para{" "}
                 <span className="font-semibold">
                   {formatDurationLabel(selectedDurationMinutes)}
-                </span>{" "}
-                en este día.
+                </span>
+                .
               </div>
             ) : (
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-sm leading-6 text-slate-700">
-                  Solo se muestran horas libres reales según el día y la
-                  duración elegida.
+                  Horas libres según fecha y duración.
                 </div>
 
                 {firstAvailableTime ? (
                   <div className="inline-flex w-fit items-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 shadow-sm">
-                    Primera hora libre: {firstAvailableTime}
+                    Primera libre: {firstAvailableTime}
                   </div>
                 ) : null}
               </div>
             )}
-          </div>
-
-          <div className="rounded-3xl border border-slate-200/80 bg-white px-4 py-4 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-slate-800">
-                  Resumen rápido
-                </p>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
-                  {selectedDateLabel}{" "}
-                  {startTime ? `· ${startTime}` : "· sin hora elegida"}{" "}
-                  {selectedDurationMinutes
-                    ? `· ${formatDurationLabel(selectedDurationMinutes)}`
-                    : null}
-                </p>
-              </div>
-
-              <span className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
-                Se guarda en mi agenda
-              </span>
-            </div>
           </div>
 
           <label className="grid gap-2">
