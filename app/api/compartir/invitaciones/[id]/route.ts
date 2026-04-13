@@ -122,7 +122,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         );
       }
 
-      const normalizedAlias = normalizeAlias(body.alias);
+      const normalizedAlias = normalizeAlias(body.alias ?? body.alias_for_invitee);
 
       const updatePayload = currentUserIsInviter
         ? { alias_for_inviter: normalizedAlias }

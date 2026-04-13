@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 type EditSharedLinkOption = {
   id: string;
@@ -35,6 +36,9 @@ export default function EditSharedLinkAliasForm({
   links,
   initialSelectedLinkId,
 }: EditSharedLinkAliasFormProps) {
+  const router = useRouter();
+  const [isRefreshing, startTransition] = useTransition();
+
   const [selectedLinkId, setSelectedLinkId] = useState<string>(
     initialSelectedLinkId && links.some((link) => link.id === initialSelectedLinkId)
       ? initialSelectedLinkId
@@ -114,13 +118,13 @@ export default function EditSharedLinkAliasForm({
           },
           body: JSON.stringify({
             action: "update_alias",
-            alias_for_invitee: trimmedAlias,
+            alias: trimmedAlias,
           }),
         }
       );
 
       const payload = (await response.json().catch(() => null)) as
-        | { error?: string; success?: boolean }
+        | { error?: string; success?: boolean; saved_alias?: string | null }
         | null;
 
       if (!response.ok) {
@@ -129,7 +133,10 @@ export default function EditSharedLinkAliasForm({
 
       setSuccessMessage("Nombre guardado correctamente.");
       setAliasValue("");
-      window.location.reload();
+
+      startTransition(() => {
+        router.refresh();
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "No se pudo guardar el alias.";
@@ -204,16 +211,6 @@ export default function EditSharedLinkAliasForm({
         </div>
       ) : null}
 
-      <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
-          Consejo
-        </p>
-        <p className="mt-1 text-sm leading-6 text-slate-700">
-          Usa un nombre fácil de reconocer, por ejemplo el oficio, la zona o el
-          nombre con el que identificas a ese compañero.
-        </p>
-      </div>
-
       <div className="mt-4 space-y-2">
         <label
           htmlFor="edit-shared-link"
@@ -227,7 +224,7 @@ export default function EditSharedLinkAliasForm({
           value={selectedLinkId}
           onChange={(event) => setSelectedLinkId(event.target.value)}
           className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-          disabled={submitting}
+          disabled={submitting || isRefreshing}
         >
           <option value="">Selecciona una conexión</option>
           {links.map((link) => (
@@ -257,7 +254,7 @@ export default function EditSharedLinkAliasForm({
           onChange={(event) => setAliasValue(event.target.value)}
           placeholder={selectedLink?.placeholder ?? "Ejemplo: Juan electricista"}
           maxLength={80}
-          disabled={submitting}
+          disabled={submitting || isRefreshing}
           className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
         />
 
@@ -282,10 +279,10 @@ export default function EditSharedLinkAliasForm({
       <div className="mt-4">
         <button
           type="submit"
-          disabled={submitting || !selectedLinkId}
+          disabled={submitting || isRefreshing || !selectedLinkId}
           className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold !text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
-          {submitting ? "Guardando..." : "Guardar nombre"}
+          {submitting ? "Guardando..." : isRefreshing ? "Actualizando..." : "Guardar nombre"}
         </button>
       </div>
     </form>
