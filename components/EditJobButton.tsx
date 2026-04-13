@@ -671,6 +671,8 @@ export default function EditJobButton(props: EditJobButtonProps) {
                     <option value="480">8 h</option>
                     <option value="540">9 h</option>
                     <option value="600">10 h</option>
+                    <option value="660">11 h</option>
+                    <option value="720">12 h</option>
                   </select>
                 </label>
               </div>
