@@ -308,8 +308,9 @@ export default async function CompartirPage({
     .filter((link) => Boolean(link.inviteId))
     .map((link) => ({
       id: String(link.inviteId),
-      label: link.title,
+      label: link.partnerEmail?.trim() || link.baseName || link.title,
       placeholder: link.aliasPlaceholder,
+      currentAlias: link.hasCustomAlias ? link.title : "",
     }));
 
   const highlightedLink =
@@ -435,12 +436,7 @@ export default async function CompartirPage({
 
                 {highlightedLink.inviteId ? (
                   <Link
-                    href={buildCompartirHref({
-                      q: searchQuery,
-                      editAlias: highlightedLink.inviteId,
-                      focusLink: highlightedLink.id,
-                      hash: "edit-shared-link-alias-form",
-                    })}
+                    href="#edit-shared-link-alias-form"
                     className={getSecondaryButtonClasses()}
                   >
                     Cambiar alias
@@ -586,7 +582,6 @@ export default async function CompartirPage({
                               <Link
                                 href={buildCompartirHref({
                                   q: searchQuery,
-                                  editAlias: link.inviteId,
                                   focusLink: link.id,
                                   hash: "edit-shared-link-alias-form",
                                 })}
