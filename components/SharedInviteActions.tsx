@@ -15,11 +15,27 @@ function getFriendlyErrorMessage(message: string) {
     return "Debes iniciar sesión para gestionar invitaciones.";
   }
 
-  if (normalized.includes("not found")) {
+  if (normalized.includes("not found") || normalized.includes("no existe")) {
     return "No se ha encontrado la invitación.";
   }
 
-  if (normalized.includes("invalid")) {
+  if (normalized.includes("solo quien la recibe puede aceptar")) {
+    return "Solo la persona que la recibe puede aceptarla.";
+  }
+
+  if (normalized.includes("solo quien la recibe puede rechazar")) {
+    return "Solo la persona que la recibe puede rechazarla.";
+  }
+
+  if (normalized.includes("solo quien envió la invitación puede cancelarla")) {
+    return "Solo quien la envió puede cancelarla.";
+  }
+
+  if (normalized.includes("pending") || normalized.includes("pendiente")) {
+    return "La invitación ya no está pendiente o ya fue gestionada.";
+  }
+
+  if (normalized.includes("invalid") || normalized.includes("acción no válida")) {
     return "La acción no se pudo completar.";
   }
 
@@ -42,16 +58,18 @@ export default function SharedInviteActions({
     setErrorMessage("");
 
     try {
-      const formData = new FormData();
-      formData.append("action", action);
-
       const response = await fetch(`/api/compartir/invitaciones/${inviteId}`, {
-        method: "POST",
-        body: formData,
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action,
+        }),
       });
 
       const payload = (await response.json().catch(() => null)) as
-        | { error?: string; success?: boolean }
+        | { error?: string; success?: boolean; ok?: boolean }
         | null;
 
       if (!response.ok) {
@@ -72,15 +90,13 @@ export default function SharedInviteActions({
     }
   }
 
-  const isBusy = Boolean(submittingAction) || isRefreshing;
-
   if (variant === "outgoing") {
     return (
       <div className="mt-4">
         <button
           type="button"
           onClick={() => submitAction("cancel")}
-          disabled={isBusy}
+          disabled={Boolean(submittingAction) || isRefreshing}
           className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
           {submittingAction === "cancel"
@@ -105,8 +121,8 @@ export default function SharedInviteActions({
         <button
           type="button"
           onClick={() => submitAction("accept")}
-          disabled={isBusy}
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold !text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          disabled={Boolean(submittingAction) || isRefreshing}
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
           {submittingAction === "accept"
             ? "Aceptando..."
@@ -118,7 +134,7 @@ export default function SharedInviteActions({
         <button
           type="button"
           onClick={() => submitAction("reject")}
-          disabled={isBusy}
+          disabled={Boolean(submittingAction) || isRefreshing}
           className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
           {submittingAction === "reject"
