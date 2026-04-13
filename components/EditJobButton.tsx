@@ -649,31 +649,38 @@ export default function EditJobButton(props: EditJobButtonProps) {
                   <span className="text-sm font-medium text-slate-700">
                     Duración *
                   </span>
-                  <select
-                    value={durationMinutes}
-                    onChange={(event) => setDurationMinutes(event.target.value)}
-                    className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
-                    disabled={!!busyStatusAction}
-                  >
-                    <option value="30">30 min</option>
-                    <option value="45">45 min</option>
-                    <option value="60">1 h</option>
-                    <option value="90">1 h 30 min</option>
-                    <option value="120">2 h</option>
-                    <option value="150">2 h 30 min</option>
-                    <option value="180">3 h</option>
-                    <option value="210">3 h 30 min</option>
-                    <option value="240">4 h</option>
-                    <option value="270">4 h 30 min</option>
-                    <option value="300">5 h</option>
-                    <option value="360">6 h</option>
-                    <option value="420">7 h</option>
-                    <option value="480">8 h</option>
-                    <option value="540">9 h</option>
-                    <option value="600">10 h</option>
-                    <option value="660">11 h</option>
-                    <option value="720">12 h</option>
-                  </select>
+<select
+  value={durationMinutes}
+  onChange={(event) => setDurationMinutes(event.target.value)}
+  className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500"
+  disabled={!!busyStatusAction}
+>
+  <option value="30">30 min</option>
+  <option value="45">45 min</option>
+  <option value="60">1 h</option>
+  <option value="90">1 h 30 min</option>
+  <option value="120">2 h</option>
+  <option value="150">2 h 30 min</option>
+  <option value="180">3 h</option>
+  <option value="210">3 h 30 min</option>
+  <option value="240">4 h</option>
+  <option value="270">4 h 30 min</option>
+  <option value="300">5 h</option>
+  <option value="330">5 h 30 min</option>
+  <option value="360">6 h</option>
+  <option value="390">6 h 30 min</option>
+  <option value="420">7 h</option>
+  <option value="450">7 h 30 min</option>
+  <option value="480">8 h</option>
+  <option value="510">8 h 30 min</option>
+  <option value="540">9 h</option>
+  <option value="570">9 h 30 min</option>
+  <option value="600">10 h</option>
+  <option value="630">10 h 30 min</option>
+  <option value="660">11 h</option>
+  <option value="690">11 h 30 min</option>
+  <option value="720">12 h</option>
+</select>
                 </label>
               </div>
 

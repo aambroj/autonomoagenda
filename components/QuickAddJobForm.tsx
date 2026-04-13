@@ -16,7 +16,8 @@ const WORK_DAY_END = "20:00";
 const AGENDA_PATH = "/agenda";
 const MAX_FUTURE_DAYS = 30;
 const DURATION_OPTIONS = [
-  30, 45, 60, 90, 120, 150, 180, 210, 240, 270, 300, 360, 420, 480, 540, 600,
+  30, 45, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450,
+  480, 510, 540, 570, 600, 630, 660, 690, 720,
 ];
 
 function toDateValue(date: Date) {
