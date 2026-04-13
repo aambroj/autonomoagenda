@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const stripePriceMonthly = process.env.STRIPE_PRICE_MONTHLY;
+const stripeCouponFirstMonth = process.env.STRIPE_COUPON_FIRST_MONTH;
 const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
 
 if (!stripeSecretKey) {
@@ -13,6 +14,10 @@ if (!stripeSecretKey) {
 
 if (!stripePriceMonthly) {
   throw new Error("Falta STRIPE_PRICE_MONTHLY");
+}
+
+if (!stripeCouponFirstMonth) {
+  throw new Error("Falta STRIPE_COUPON_FIRST_MONTH");
 }
 
 if (!appUrl) {
@@ -68,17 +73,19 @@ export async function POST() {
 
       stripeCustomerId = customer.id;
 
-      const { error: upsertError } = await supabaseAdmin.from("subscriptions").upsert(
-        {
-          user_id: user.id,
-          stripe_customer_id: stripeCustomerId,
-          plan: "autonomoagenda_monthly",
-          status: "incomplete",
-        },
-        {
-          onConflict: "user_id",
-        }
-      );
+      const { error: upsertError } = await supabaseAdmin
+        .from("subscriptions")
+        .upsert(
+          {
+            user_id: user.id,
+            stripe_customer_id: stripeCustomerId,
+            plan: "autonomoagenda_monthly",
+            status: "incomplete",
+          },
+          {
+            onConflict: "user_id",
+          }
+        );
 
       if (upsertError) {
         return NextResponse.json(
@@ -96,6 +103,7 @@ export async function POST() {
       billing_address_collection: "auto",
       allow_promotion_codes: true,
       line_items: [{ price: stripePriceMonthly, quantity: 1 }],
+      discounts: [{ coupon: stripeCouponFirstMonth }],
       metadata: {
         user_id: user.id,
         plan: "autonomoagenda_monthly",
