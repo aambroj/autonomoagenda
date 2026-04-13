@@ -202,8 +202,8 @@ export default async function CuentaPage({ searchParams }: CuentaPageProps) {
               </h2>
               <p className="mt-2 text-sm leading-6 sm:text-base">
                 El pago se ha completado bien y tu cuenta ya está conectada con
-                Stripe en modo prueba. Desde ahora puedes gestionar tu
-                facturación desde esta misma pantalla.
+                Stripe. Desde ahora puedes gestionar tu facturación desde esta
+                misma pantalla.
               </p>
             </div>
           ) : null}
@@ -266,8 +266,7 @@ export default async function CuentaPage({ searchParams }: CuentaPageProps) {
 
               <div className="mt-3 space-y-2 text-sm leading-6 text-slate-600 sm:text-base">
                 <p>
-                  Estado actual de la suscripción conectado con Stripe en modo
-                  prueba.
+                  Estado actual de la suscripción conectado con Stripe.
                 </p>
 
                 {formattedPeriodEnd ? (
@@ -291,7 +290,7 @@ export default async function CuentaPage({ searchParams }: CuentaPageProps) {
 
           <section className="mt-8 min-w-0 rounded-[2rem] border border-emerald-200 bg-emerald-50/95 p-5 shadow-sm sm:p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">
-              Suscripción y pagos
+              Suscripción y facturación
             </p>
 
             <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
@@ -303,7 +302,7 @@ export default async function CuentaPage({ searchParams }: CuentaPageProps) {
             <p className="mt-3 max-w-3xl text-sm leading-6 text-emerald-900 sm:text-base">
               {isActiveSubscription
                 ? "Ya tienes la cuenta activada. Desde aquí puedes entrar al portal de facturación para gestionar tarjeta, cancelación y datos de pago."
-                : "Desde aquí puedes abrir Stripe Checkout para activar la suscripción o entrar al portal de facturación para gestionar tarjeta, cancelación y datos de pago."}
+                : "Desde aquí puedes activar la suscripción o entrar al portal de facturación para gestionar tarjeta, cancelación y datos de pago."}
             </p>
 
             <div className="mt-5 grid gap-3 sm:max-w-md">
@@ -360,8 +359,8 @@ export default async function CuentaPage({ searchParams }: CuentaPageProps) {
             </p>
 
             <p className="mt-3 max-w-3xl text-sm leading-6 text-amber-900 sm:text-base">
-              Cuando Stripe quede ya validado también podremos enlazar aquí una
-              cancelación más clara desde el portal de facturación.
+              La gestión de cancelación de la suscripción la haces desde
+              facturación.
             </p>
           </section>
 
