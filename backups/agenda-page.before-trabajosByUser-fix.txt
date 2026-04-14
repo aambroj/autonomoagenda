@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSupabaseServer } from "@/lib/supabase-server";
 import InternalTopbar from "@/components/InternalTopbar";
@@ -284,7 +284,7 @@ function formatStatusMoment(value: string | null | undefined) {
 
   return `${
     dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)
-  } · ${timeLabel}`;
+  } Â· ${timeLabel}`;
 }
 
 function isSundayDate(dateValue: string) {
@@ -1150,7 +1150,7 @@ function renderTrabajoCard(
     ? `Cancelado el ${formatStatusMoment(
         trabajo.cancelled_at,
       )}. Ya no ocupa hueco.`
-    : "Este trabajo está cancelado y ya no ocupa hueco.";
+    : "Este trabajo estÃ¡ cancelado y ya no ocupa hueco.";
 
   return (
     <article
@@ -1245,7 +1245,7 @@ function renderTrabajoCard(
             {trabajo.phone ? (
               <div className="rounded-2xl bg-white/75 px-3 py-2.5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 sm:text-sm">
-                  Teléfono
+                  TelÃ©fono
                 </p>
                 <p className="mt-0.5 text-base font-semibold leading-tight text-slate-800 sm:text-lg">
                   {trabajo.phone}
@@ -1256,7 +1256,7 @@ function renderTrabajoCard(
             {trabajo.address ? (
               <div className="rounded-2xl bg-white/75 px-3 py-2.5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 sm:text-sm">
-                  Dirección
+                  DirecciÃ³n
                 </p>
                 <p className="mt-0.5 text-base font-semibold leading-tight text-slate-800 sm:text-lg">
                   {trabajo.address}
@@ -1722,11 +1722,11 @@ function renderTimelinePanel(params: {
                 Descanso semanal
               </p>
               <p className="mt-2 text-sm leading-6 text-rose-700 sm:text-base">
-                Este día queda cerrado por descanso.
+                Este dÃ­a queda cerrado por descanso.
               </p>
               {dayItem.items.length > 0 ? (
                 <p className="mt-3 text-sm font-medium leading-6 text-rose-800">
-                  Los trabajos guardados para este día se siguen mostrando
+                  Los trabajos guardados para este dÃ­a se siguen mostrando
                   abajo.
                 </p>
               ) : null}
@@ -1750,11 +1750,11 @@ function renderTimelinePanel(params: {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-base font-bold text-slate-800 sm:text-lg">
-            Vista del día
+            Vista del dÃ­a
           </p>
           <p className="mt-1 text-sm text-slate-500">
             {readOnly
-              ? "Consulta rápida en solo lectura."
+              ? "Consulta rÃ¡pida en solo lectura."
               : "Bloques ocupados y huecos reales."}
           </p>
         </div>
@@ -1859,11 +1859,11 @@ function renderTimelinePanel(params: {
                       <span className="font-black uppercase tracking-wide text-emerald-700">
                         {isUsable ? "Hueco libre" : "Libre corto"}
                       </span>
-                      <span className="mx-2 text-emerald-500">·</span>
+                      <span className="mx-2 text-emerald-500">Â·</span>
                       <span>{gap.start}</span>
                       <span className="mx-1.5 text-emerald-500">-</span>
                       <span>{gap.end}</span>
-                      <span className="mx-2 text-emerald-500">·</span>
+                      <span className="mx-2 text-emerald-500">Â·</span>
                       <span>{formatGapLabel(gap.minutes)}</span>
                     </div>
                   </div>
@@ -1896,11 +1896,11 @@ function renderTimelinePanel(params: {
                       <span className="font-black uppercase tracking-wide text-emerald-700">
                         Hueco libre
                       </span>
-                      <span className="mx-2 text-emerald-500">·</span>
+                      <span className="mx-2 text-emerald-500">Â·</span>
                       <span>{gap.start}</span>
                       <span className="mx-1.5 text-emerald-500">-</span>
                       <span>{gap.end}</span>
-                      <span className="mx-2 text-emerald-500">·</span>
+                      <span className="mx-2 text-emerald-500">Â·</span>
                       <span>{formatGapLabel(gap.minutes)}</span>
                     </div>
                   </div>
@@ -1926,11 +1926,11 @@ function renderTimelinePanel(params: {
                     <span className="font-black uppercase tracking-wide text-emerald-700">
                       Libre corto
                     </span>
-                    <span className="mx-2 text-emerald-500">·</span>
+                    <span className="mx-2 text-emerald-500">Â·</span>
                     <span>{gap.start}</span>
                     <span className="mx-1.5 text-emerald-500">-</span>
                     <span>{gap.end}</span>
-                    <span className="mx-2 text-emerald-500">·</span>
+                    <span className="mx-2 text-emerald-500">Â·</span>
                     <span>{formatGapLabel(gap.minutes)}</span>
                   </div>
                 </div>
@@ -1947,13 +1947,13 @@ function renderTimelinePanel(params: {
               <div className="flex h-full items-center justify-between gap-3 overflow-hidden whitespace-nowrap">
                 <div className="min-w-0 flex-1 truncate text-[14px] font-bold tabular-nums sm:text-base">
                   <span className="font-black">{trabajo.client_name}</span>
-                  <span className="mx-2 opacity-50">·</span>
+                  <span className="mx-2 opacity-50">Â·</span>
                   <span>{formatTime(trabajo.start_time)}</span>
                   <span className="mx-1.5 opacity-50">-</span>
                   <span>
                     {addMinutes(trabajo.start_time, trabajo.duration_minutes)}
                   </span>
-                  <span className="mx-2 opacity-50">·</span>
+                  <span className="mx-2 opacity-50">Â·</span>
                   <span>
                     {formatJobDurationLabel(trabajo.duration_minutes)}
                   </span>
@@ -2033,7 +2033,7 @@ function renderDayMetrics(dayItem: AgendaDayData) {
       {renderMiniMetricCard({
         title: "Primera libre",
         value: dayItem.firstFreeTime ?? "--:--",
-        detail: "Primer hueco del día.",
+        detail: "Primer hueco del dÃ­a.",
       })}
       {renderMiniMetricCard({
         title: "Hueco mayor",
@@ -2073,12 +2073,12 @@ function renderGapSection(params: {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-base font-bold text-slate-800 sm:text-lg">
-            {readOnly ? "Huecos visibles" : "Huecos útiles"}
+            {readOnly ? "Huecos visibles" : "Huecos Ãºtiles"}
           </p>
           <p className="mt-1 text-sm text-slate-500">
             {readOnly
-              ? "Consulta los tramos libres de este día."
-              : "Pulsa un hueco para preparar el alta rápida."}
+              ? "Consulta los tramos libres de este dÃ­a."
+              : "Pulsa un hueco para preparar el alta rÃ¡pida."}
           </p>
         </div>
 
@@ -2090,8 +2090,8 @@ function renderGapSection(params: {
       {dayItem.usableGaps.length === 0 ? (
         <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
           {dayItem.hasActualFreeTime
-            ? `Queda tiempo libre, pero ningún tramo llega a ${MIN_GAP_MINUTES} min.`
-            : `No quedan huecos de ${MIN_GAP_MINUTES} min o más.`}
+            ? `Queda tiempo libre, pero ningÃºn tramo llega a ${MIN_GAP_MINUTES} min.`
+            : `No quedan huecos de ${MIN_GAP_MINUTES} min o mÃ¡s.`}
         </div>
       ) : (
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -2168,7 +2168,7 @@ function renderGapSection(params: {
                   </div>
 
                   <span className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition group-hover:bg-emerald-700">
-                    Encajar aquí
+                    Encajar aquÃ­
                   </span>
                 </div>
               </Link>
@@ -2188,12 +2188,12 @@ function getDayHeaderSummary(params: {
 
   if (dayItem.isNonWorkingDay) {
     if (dayItem.items.length > 0) {
-      return `Día de descanso con ${dayItem.items.length} trabajo${
+      return `DÃ­a de descanso con ${dayItem.items.length} trabajo${
         dayItem.items.length === 1 ? "" : "s"
       }.`;
     }
 
-    return "Día de descanso.";
+    return "DÃ­a de descanso.";
   }
 
   if (hasActiveFilters) {
@@ -2357,7 +2357,7 @@ function renderArchivedSection(params: {
           <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-lg">
             {readOnly
               ? "Vista en solo lectura."
-              : "Guardados fuera de producción hasta decidir qué hacer con ellos."}
+              : "Guardados fuera de producciÃ³n hasta decidir quÃ© hacer con ellos."}
           </p>
         </div>
 
@@ -2429,7 +2429,7 @@ function renderSharedAgendaSection(params: {
             href={owner.manageConnectionHref}
             className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 xl:w-auto"
           >
-            Gestionar conexión
+            Gestionar conexiÃ³n
           </Link>
 
           <Link
@@ -2479,7 +2479,7 @@ function renderSharedAgendaSection(params: {
             {renderSummaryCard({
               title: "Archivados",
               value: data.archivedCount,
-              subtitle: "Guardados fuera de producción.",
+              subtitle: "Guardados fuera de producciÃ³n.",
               valueClasses: "text-slate-700",
               cardClasses: "border-slate-300 bg-white/88",
             })}
@@ -2521,32 +2521,8 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
   }
 
   const currentUser = user as NonNullable<typeof user>;
-  const ownerEmail = process.env.OWNER_EMAIL?.trim().toLowerCase() ?? "";
-  const currentUserEmail = currentUser.email?.trim().toLowerCase() ?? "";
 
-  if (currentUserEmail !== ownerEmail) {
-    const { data: subscription, error: subscriptionError } = await supabase
-      .from("subscriptions")
-      .select("status")
-      .eq("user_id", currentUser.id)
-      .maybeSingle();
-
-    if (subscriptionError) {
-      redirect("/cuenta?required=1&reason=subscription_error");
-    }
-
-    const subscriptionStatus =
-      typeof subscription?.status === "string"
-        ? subscription.status.trim().toLowerCase()
-        : "";
-
-    const hasAccess =
-      subscriptionStatus === "active" || subscriptionStatus === "trialing";
-
-    if (!hasAccess) {
-      redirect("/cuenta?required=1&reason=subscription_required");
-    }
-  }
+  redirect("/cuenta?route_test=agenda");
 
   const resolvedSearchParams = (await searchParams) ?? {};
   const query = (resolvedSearchParams.q ?? "").trim();
@@ -2661,22 +2637,27 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
     .order("work_date", { ascending: true })
     .order("start_time", { ascending: true });
 
-  const allTrabajos = ((trabajosData as Trabajo[]) ?? []).filter(Boolean);
+const allTrabajos = ((trabajosData as Trabajo[]) ?? []).filter(Boolean);
 
-  const trabajosByUser = new Map<string, Trabajo[]>();
+const trabajosByUser: Map<string, Trabajo[]> = new Map<string, Trabajo[]>();
 
-  for (const owner of uniqueOwners) {
-    trabajosByUser.set(owner.userId, []);
+for (const owner of uniqueOwners) {
+  trabajosByUser.set(owner.userId, []);
+}
+
+for (const trabajo of allTrabajos) {
+  const ownerId = trabajo.user_id ?? "";
+
+  if (!trabajosByUser.has(ownerId)) {
+    trabajosByUser.set(ownerId, []);
   }
 
-  for (const trabajo of allTrabajos) {
-    const ownerId = trabajo.user_id ?? "";
-    if (!trabajosByUser.has(ownerId)) {
-      trabajosByUser.set(ownerId, []);
-    }
-    trabajosByUser.get(ownerId)?.push(trabajo);
-  }
+  const existingTrabajos = trabajosByUser.get(ownerId);
 
+  if (existingTrabajos) {
+    existingTrabajos.push(trabajo);
+  }
+}
   const previousWeekDate = addDaysToDateValue(anchorDate, -7);
   const nextWeekDate = addDaysToDateValue(anchorDate, 7);
   const todayWeekDate = todayInMadrid;
@@ -2782,8 +2763,8 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
 
               <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600 sm:text-lg">
                 {selectedSharedAgenda
-                  ? "Estás viendo una agenda compartida en solo lectura."
-                  : "Mira tu semana y detecta rápido dónde encaja otro trabajo."}
+                  ? "EstÃ¡s viendo una agenda compartida en solo lectura."
+                  : "Mira tu semana y detecta rÃ¡pido dÃ³nde encaja otro trabajo."}
               </p>
 
               <p className="mt-3 text-sm leading-6 text-slate-500">
@@ -2918,7 +2899,7 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
                   </div>
 
                   <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
-                    Tu agenda sigue disponible. Usa el botón para volver a
+                    Tu agenda sigue disponible. Usa el botÃ³n para volver a
                     trabajar sobre ella.
                   </p>
                 </div>
@@ -2933,7 +2914,7 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
 
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {renderSummaryCard({
-                  title: `${summaryDateLabel} · Comprometidos`,
+                  title: `${summaryDateLabel} Â· Comprometidos`,
                   value: ownAgendaData.committedCount,
                   subtitle: "Trabajos ya encajados.",
                   valueClasses: "text-red-700",
@@ -2941,7 +2922,7 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
                 })}
 
                 {renderSummaryCard({
-                  title: `${summaryDateLabel} · Hechos`,
+                  title: `${summaryDateLabel} Â· Hechos`,
                   value: ownAgendaData.doneCount,
                   subtitle: "Trabajos realizados.",
                   valueClasses: "text-sky-700",
@@ -2959,7 +2940,7 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
                 {renderSummaryCard({
                   title: "Archivados",
                   value: ownAgendaData.archivedCount,
-                  subtitle: "Guardados fuera de producción.",
+                  subtitle: "Guardados fuera de producciÃ³n.",
                   valueClasses: "text-slate-700",
                   cardClasses: "border-slate-300 bg-white/88",
                 })}
@@ -2991,7 +2972,7 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
 
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {renderSummaryCard({
-                  title: `${summaryDateLabel} · Comprometidos`,
+                  title: `${summaryDateLabel} Â· Comprometidos`,
                   value: ownAgendaData.committedCount,
                   subtitle: "Trabajos ya encajados.",
                   valueClasses: "text-red-700",
@@ -2999,7 +2980,7 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
                 })}
 
                 {renderSummaryCard({
-                  title: `${summaryDateLabel} · Hechos`,
+                  title: `${summaryDateLabel} Â· Hechos`,
                   value: ownAgendaData.doneCount,
                   subtitle: "Trabajos realizados.",
                   valueClasses: "text-sky-700",
@@ -3017,7 +2998,7 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
                 {renderSummaryCard({
                   title: "Archivados",
                   value: ownAgendaData.archivedCount,
-                  subtitle: "Guardados fuera de producción.",
+                  subtitle: "Guardados fuera de producciÃ³n.",
                   valueClasses: "text-slate-700",
                   cardClasses: "border-slate-300 bg-white/88",
                 })}
@@ -3032,7 +3013,7 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
                       Semana de un vistazo
                     </h2>
                     <p className="mt-1 text-sm leading-6 text-slate-600">
-                      Para ver rápido qué día conviene aprovechar.
+                      Para ver rÃ¡pido quÃ© dÃ­a conviene aprovechar.
                     </p>
                   </div>
 
@@ -3120,14 +3101,14 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
                           }`}
                         >
                           {dayItem.isNonWorkingDay
-                            ? "Día no laborable"
+                            ? "DÃ­a no laborable"
                             : `${dayItem.occupancyPercentage}% ocupado`}
                         </p>
                       </div>
 
                       {dayItem.isNonWorkingDay ? (
                         <div className="mt-4 rounded-2xl border border-rose-200 bg-white/70 px-3 py-3 text-sm text-rose-700">
-                          Sin huecos automáticos.
+                          Sin huecos automÃ¡ticos.
                         </div>
                       ) : (
                         <div className="mt-4 grid gap-2 text-sm text-slate-600">
@@ -3196,10 +3177,12 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
 
         {activeLinksError || inviteError ? (
           <div className="mt-8 rounded-[2rem] border border-red-200 bg-red-50 p-5 text-red-700 shadow-sm">
-            No se pudo cargar toda la información de las agendas compartidas.
+            No se pudo cargar toda la informaciÃ³n de las agendas compartidas.
           </div>
         ) : null}
       </div>
     </main>
   );
 }
+
+
