@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSupabaseServer } from "@/lib/supabase-server";
+import { ensurePaidAccess } from "@/lib/subscription-access";
 import InternalTopbar from "@/components/InternalTopbar";
 import QuickAddJobForm from "@/components/QuickAddJobForm";
 import JobActions from "@/components/JobActions";
@@ -2519,6 +2520,13 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
   if (!user) {
     redirect("/login");
   }
+
+  await ensurePaidAccess({
+    supabase,
+    userId: user.id,
+    userEmail: user.email,
+    redirectTo: "/cuenta",
+  });
 
   const resolvedSearchParams = (await searchParams) ?? {};
   const query = (resolvedSearchParams.q ?? "").trim();
