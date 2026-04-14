@@ -6,6 +6,8 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const stripePriceMonthly = process.env.STRIPE_PRICE_MONTHLY;
 const stripeCouponFirstMonth = process.env.STRIPE_COUPON_FIRST_MONTH;
+const stripeCouponOwnerFree = process.env.STRIPE_COUPON_OWNER_FREE;
+const ownerEmail = process.env.OWNER_EMAIL?.trim().toLowerCase();
 const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
 
 if (!stripeSecretKey) {
@@ -20,6 +22,14 @@ if (!stripeCouponFirstMonth) {
   throw new Error("Falta STRIPE_COUPON_FIRST_MONTH");
 }
 
+if (!stripeCouponOwnerFree) {
+  throw new Error("Falta STRIPE_COUPON_OWNER_FREE");
+}
+
+if (!ownerEmail) {
+  throw new Error("Falta OWNER_EMAIL");
+}
+
 if (!appUrl) {
   throw new Error("Falta NEXT_PUBLIC_APP_URL");
 }
@@ -29,6 +39,10 @@ const stripe = new Stripe(stripeSecretKey);
 type SubscriptionRow = {
   stripe_customer_id: string | null;
 };
+
+function normalizeEmail(value: string | null | undefined) {
+  return value?.trim().toLowerCase() ?? "";
+}
 
 export async function POST() {
   try {
@@ -95,6 +109,9 @@ export async function POST() {
       }
     }
 
+    const userEmail = normalizeEmail(user.email);
+    const isOwner = userEmail === ownerEmail;
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: stripeCustomerId,
@@ -103,15 +120,21 @@ export async function POST() {
       billing_address_collection: "auto",
       allow_promotion_codes: true,
       line_items: [{ price: stripePriceMonthly, quantity: 1 }],
-      discounts: [{ coupon: stripeCouponFirstMonth }],
+      discounts: [
+        {
+          coupon: isOwner ? stripeCouponOwnerFree : stripeCouponFirstMonth,
+        },
+      ],
       metadata: {
         user_id: user.id,
         plan: "autonomoagenda_monthly",
+        applied_discount: isOwner ? "owner_free" : "first_month",
       },
       subscription_data: {
         metadata: {
           user_id: user.id,
           plan: "autonomoagenda_monthly",
+          applied_discount: isOwner ? "owner_free" : "first_month",
         },
       },
       success_url: `${appUrl}/cuenta?checkout=success`,
