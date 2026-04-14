@@ -7,7 +7,12 @@ const supabasePublishableKey =
 const ownerEmail = process.env.OWNER_EMAIL?.trim().toLowerCase() ?? "";
 
 function isProtectedRoute(pathname: string) {
-  return pathname === "/agenda" || pathname.startsWith("/agenda/");
+  return (
+    pathname === "/agenda" ||
+    pathname.startsWith("/agenda/") ||
+    pathname === "/compartir" ||
+    pathname.startsWith("/compartir/")
+  );
 }
 
 function isAuthRoute(pathname: string) {
@@ -101,9 +106,9 @@ export async function proxy(request: NextRequest) {
   const currentUserEmail = user.email?.trim().toLowerCase() ?? "";
   const isOwner = ownerEmail !== "" && currentUserEmail === ownerEmail;
 
-  let canAccessAgenda = isOwner;
+  let canAccessPaidArea = isOwner;
 
-  if (!canAccessAgenda) {
+  if (!canAccessPaidArea) {
     const { data: subscription, error: subscriptionError } = await supabase
       .from("subscriptions")
       .select("status")
@@ -121,10 +126,10 @@ export async function proxy(request: NextRequest) {
       return response;
     }
 
-    canAccessAgenda = hasSubscriptionAccess(subscription?.status);
+    canAccessPaidArea = hasSubscriptionAccess(subscription?.status);
   }
 
-  if (isProtectedRoute(pathname) && !canAccessAgenda) {
+  if (isProtectedRoute(pathname) && !canAccessPaidArea) {
     return buildRedirectResponse(request, response, "/cuenta", {
       required: "1",
       reason: "subscription_required",
@@ -132,7 +137,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isAuthRoute(pathname)) {
-    if (canAccessAgenda) {
+    if (canAccessPaidArea) {
       return buildRedirectResponse(request, response, "/agenda");
     }
 
@@ -146,5 +151,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/agenda/:path*", "/login", "/registro"],
+  matcher: ["/agenda/:path*", "/compartir/:path*", "/login", "/registro"],
 };
